@@ -8,8 +8,8 @@ main:
           - event_type: ${event.type}
           - bucket: ${event.bucket}
           - object: ${event.data.name}
-          - input_uri: "gs://${bucket}/${object}"
-          - output_uri: "gs://apex-dev-gcs-processed-videos/output/${object}/"
+          - input_uri: ${"gs://" + bucket + "/" + object}
+          - output_uri: ${"gs://apex-dev-gcs-processed-videos/output/" + object + /"}
           - template_id: ${sys.get_env("TRANSCODER_TEMPLATE_ID")}
 
     - log_event:
