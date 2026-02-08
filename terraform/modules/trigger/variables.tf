@@ -31,4 +31,6 @@ variable "service_account_name" {
 variable "workflow_name" {
   description = "The name of the Workflow to be triggered by Eventarc."
   type        = string
+  default     = "projects/${var.project_id}/locations/${var.project_region}/workflows/prj-apex-video-orchestrator"
+
 }
