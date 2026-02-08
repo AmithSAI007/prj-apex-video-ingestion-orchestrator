@@ -3,8 +3,8 @@ main:
   steps:
     - init:
         assign:
-          - project_id: ${sys.get_env("PROJECT_ID")}
-          - project_region: ${sys.get_env("PROJECT_REGION")}
+          - project_id: ${sys.get_env("GOOGLE_CLOUD_PROJECT_ID")}
+          - project_region: ${sys.get_env("GOOGLE_CLOUD_LOCATION")}
           - event_type: ${event.type}
           - bucket: ${event.bucket}
           - object: ${event.data.name}
@@ -22,7 +22,7 @@ main:
     - start_transcoding_job:
         call: googleapis.transcoder.v1.projects.locations.jobs.create
         args:
-          parent: "projects/${project_id}/locations/${project_region}"
+          parent: ${"projects/" + project_id + "/locations/" + project_region}
           body:
             inputUri: ${input_uri}
             outputUri: ${output_uri}
