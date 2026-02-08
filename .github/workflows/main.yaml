@@ -51,6 +51,7 @@ jobs:
     name: "Deploy workflow"
     needs: determine_environment
     runs-on: ubuntu-24.04
+    environment: ${{ needs.determine_environment.outputs.environment }}
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
