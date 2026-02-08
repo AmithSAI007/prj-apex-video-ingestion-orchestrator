@@ -7,13 +7,18 @@ module "storage" {
   source = "../../modules/storage"
 }
 
+module "pubsub" {
+  source                       = "../../modules/pubsub"
+  completion_pubsub_topic_name = var.completion_pubsub_topic_name
+}
+
 module "eventarc_trigger" {
   source                       = "../../modules/triggers"
   project_id                   = var.project_id
   project_region               = var.project_region
   raw_videos_bucket_name       = module.storage.raw_videos_bucket_name
   service_account_name         = module.iam.service_account_name
-  completion_pubsub_topic_name = var.completion_pubsub_topic_name
+  transcoder_complete_topic_id = module.pubsub.completion_pubsub_topic_id
 }
 
 module "workflows" {

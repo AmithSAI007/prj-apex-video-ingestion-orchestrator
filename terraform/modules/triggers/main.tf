@@ -23,7 +23,7 @@ resource "google_eventarc_trigger" "trancode_completion_trigger" {
   location = var.project_region
   transport {
     pubsub {
-      topic = "projects/${var.project_id}/topics/${var.completion_pubsub_topic_name}"
+      topic = var.transcoder_complete_topic_id
     }
   }
 
