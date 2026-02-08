@@ -4,9 +4,13 @@ main:
     - init:
         assign:
           - project_id: ${sys.get_env("PROJECT_ID")}
+          - project_region: ${sys.get_env("PROJECT_REGION")}
           - event_type: ${event.type}
           - bucket: ${event.bucket}
           - object: ${event.data.name}
+          - input_uri: "gs://${bucket}/${object}"
+          - output_uri: "gs://apex-dev-gcs-processed-videos/output/${object}/"
+          - template_id: ${sys.get_env("TRANSCODER_TEMPLATE_ID")}
 
     - log_event:
         call: sys.log
@@ -14,6 +18,23 @@ main:
           severity: "INFO"
           json:
             event_payload: ${event}
+
+    - start_transcoding_job:
+        call: googleapis.video.transcoder.jobs.create
+        args:
+          parent: "projects/${project_id}/locations/${project_region}"
+        job:
+          inputUri: ${input_uri}
+          outputUri: ${output_uri}
+          templateId: ${template_id}
+        result: transcoding_result
+
+    - log_job_creation:
+        call: sys.log
+        args:
+          severity: "INFO"
+          json:
+            transcoding_job: ${transcoding_result}
 
     - return_result:
         return:
