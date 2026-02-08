@@ -13,7 +13,6 @@ main:
           - input_uri: ${"gs://" + bucket + "/" + object}
           - output_uri: ${"gs://apex-dev-gcs-processed-videos/output/" + video_id + "/"}
           - template_id: ${sys.get_env("TRANSCODER_TEMPLATE_ID")}
-          - topic_name: ${sys.get_env("PUBSUB_TOPIC_NAME")}
           - doc_name: ${"projects/" + project_id + "/databases/" + firestore_db + "/documents/videos/" + video_id}
           - current_time: ${time.format(sys.now())}
 
@@ -78,9 +77,6 @@ main:
             inputUri: ${input_uri}
             outputUri: ${output_uri}
             templateId: ${template_id}
-            config:
-              pubsubDestination:
-                topic: ${"projects/" + project_id + "/topics/" + topic_name}
             labels:
               video_id: ${video_id}
 
