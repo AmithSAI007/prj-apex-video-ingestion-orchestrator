@@ -23,7 +23,7 @@ main:
         call: googleapis.transcoder.v1.projects.locations.jobs.create
         args:
           parent: "projects/${project_id}/locations/${project_region}"
-          job:
+          body:
             inputUri: ${input_uri}
             outputUri: ${output_uri}
             templateId: ${template_id}
