@@ -11,6 +11,7 @@ main:
           - input_uri: ${"gs://" + bucket + "/" + object}
           - output_uri: ${"gs://apex-dev-gcs-processed-videos/output/" + object + "/"}
           - template_id: ${sys.get_env("TRANSCODER_TEMPLATE_ID")}
+          - topic_name: ${sys.get_env("PUBSUB_TOPIC_NAME")}
 
     - log_event:
         call: sys.log
@@ -27,6 +28,8 @@ main:
             inputUri: ${input_uri}
             outputUri: ${output_uri}
             templateId: ${template_id}
+            pubsubDestination:
+              topic: ${"projects/" + project_id + "/topics/" + topic_name}
         result: transcoding_result
 
     - log_job_creation:
