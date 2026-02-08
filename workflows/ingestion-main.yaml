@@ -44,7 +44,7 @@ main:
               - "height"
               - "duration"
               - "has_audio"
-          resource:
+          body:
             fields:
               video_id:
                 stringValue: ${video_id}
