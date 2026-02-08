@@ -82,7 +82,7 @@ jobs:
             --project=${{ secrets.PROJECT_ID }} \
             --call-log-level=log-all-calls \
             --service-account=${{ secrets.SERVICE_ACCOUNT }} \
-            --set-env-vars=TRANSCODER_TEMPLATE_ID=${{ secrets.TRANSCODER_TEMPLATE_ID }}
+            --set-env-vars=TRANSCODER_TEMPLATE_ID=${{ secrets.TRANSCODER_TEMPLATE_ID }},PUBSUB_TOPIC_NAME=${{ secrets.PUBSUB_TOPIC_NAME }}
 
       - name: Create Terraform Config
         run: |
