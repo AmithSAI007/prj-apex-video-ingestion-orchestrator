@@ -19,7 +19,7 @@ variable "project_region" {
 variable "trigger_name" {
   description = "The name of the Eventarc trigger."
   type        = string
-  default     = "apex-transcoder-storage-trigger"
+  default     = "apex-transcoder-workflow-trigger"
 }
 
 variable "raw_videos_bucket_name" {
