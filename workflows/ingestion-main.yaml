@@ -5,20 +5,70 @@ main:
         assign:
           - project_id: ${sys.get_env("GOOGLE_CLOUD_PROJECT_ID")}
           - project_region: ${sys.get_env("GOOGLE_CLOUD_LOCATION")}
+          - video_id: ${sys.get_env("GOOGLE_CLOUD_WORKFLOW_EXECUTION_ID")}
+          - firestore_db: ${sys.get_env("GOOGLE_CLOUD_FIRESTORE_DB")}
           - event_type: ${event.type}
           - bucket: ${event.bucket}
           - object: ${event.data.name}
           - input_uri: ${"gs://" + bucket + "/" + object}
-          - output_uri: ${"gs://apex-dev-gcs-processed-videos/output/" + object + "/"}
+          - output_uri: ${"gs://apex-dev-gcs-processed-videos/output/" + video_id + "/"}
           - template_id: ${sys.get_env("TRANSCODER_TEMPLATE_ID")}
           - topic_name: ${sys.get_env("PUBSUB_TOPIC_NAME")}
+          - doc_name: ${"projects/" + project_id + "/databases/" + firestore_db + "/documents/videos/" + video_id}
+          - current_time: ${time.format(sys.now())}
 
-    - log_event:
+    - log_start:
         call: sys.log
         args:
           severity: "INFO"
           json:
+            message: "Received new video upload event"
+            video_id: ${video_id}
+            file: ${object}
             event_payload: ${event}
+
+    - create_firestore_doc:
+        call: googleapis.firestore.v1.projects.databases.documents.create
+        args:
+          name: ${doc_name}
+          updateMask:
+            fieldPaths:
+              - "video_id"
+              - "original_filename"
+              - "status"
+              - "input_uri"
+              - "output_uri"
+              - "created_at"
+              - "updated_at"
+              - "width"
+              - "height"
+              - "duration"
+              - "has_audio"
+          resource:
+            fields:
+              video_id:
+                stringValue: ${video_id}
+              original_filename:
+                stringValue: ${original_filename}
+              status:
+                stringValue: "PENDING"
+              input_uri:
+                stringValue: ${input_uri}
+              output_uri:
+                stringValue: ${output_uri}
+              width:
+                integerValue: 0
+              height:
+                integerValue: 0
+              duration:
+                doubleValue: 0.0
+              has_audio:
+                booleanValue: false
+              created_at:
+                timestampValue: ${current_time}
+              updated_at:
+                timestampValue: ${current_time}
+        result: firestore_result
 
     - start_transcoding_job:
         call: googleapis.transcoder.v1.projects.locations.jobs.create
@@ -30,6 +80,9 @@ main:
             templateId: ${template_id}
             pubsubDestination:
               topic: ${"projects/" + project_id + "/topics/" + topic_name}
+            labels:
+              video_id: ${video_id}
+
         result: transcoding_result
 
     - log_job_creation:
