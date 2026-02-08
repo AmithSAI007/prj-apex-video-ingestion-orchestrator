@@ -19,7 +19,6 @@ variable "project_region" {
 variable "service_account_name" {
   description = "The service account name to be used by the Cloud Run service."
   type        = string
-  default     = "apex-video-orchestrator-svc"
 }
 
 variable "transcoder_template_id" {
@@ -27,20 +26,22 @@ variable "transcoder_template_id" {
   type        = string
 }
 
+variable "processed_bucket_name" {
+  description = "The name of the Cloud Storage bucket where processed videos will be stored."
+  type        = string
+}
+
 variable "workflow_name" {
   description = "The name of the Workflow to be triggered by Eventarc."
   type        = string
-  default     = "prj-apex-video-orchestrator-workflow"
 }
 
 variable "completion_workflow_name" {
   description = "The name of the Workflow to be triggered by Eventarc."
   type        = string
-  default     = "prj-apex-video-transcode-completion-workflow"
 }
 
 variable "firestore_db_name" {
   description = "The name of the Firestore database to be used for storing video metadata."
   type        = string
-  default     = "apex-firestore-db"
 }

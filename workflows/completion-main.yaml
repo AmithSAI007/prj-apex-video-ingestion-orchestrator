@@ -1,0 +1,83 @@
+main:
+  params: [event]
+  steps:
+    - init:
+        assign:
+          - project_id: ${sys.get_env("GOOGLE_CLOUD_PROJECT_ID")}
+          - project_region: ${sys.get_env("GOOGLE_CLOUD_LOCATION")}
+          - firestore_db: ${sys.get_env("FIRESTORE_DB")}
+          - pubsub_message_bytes: ${base64.decode(event.data.message.data)}
+          - state: ${job_data.state}
+          - job_name: ${job_data.name}
+          - video_id: ${job_data.labels.video_id}
+          - job_data: ${json.decode(text.decode(pubsub_message_bytes))}
+          - doc_name: ${"projects/" + project_id + "/databases/" + firestore_db + "/documents/videos/" + video_id}
+          - current_time: ${time.format(sys.now())}
+
+    - log_completion:
+        call: sys.log
+        args:
+          severity: "INFO"
+          json:
+            message: "Transcoding job completed"
+            video_id: ${video_id}
+            job_name: ${job_name}
+            state: ${state}
+            job_data: ${job_data}
+
+    - check_status:
+        switch:
+          - condition: ${state == "SUCCEEDED"}
+            next: handle_success
+          - condition: ${state == "FAILED"}
+            next: handle_failure
+        next: handle_unknown
+
+    - handle_success:
+        call: googleapis.firestore.v1.projects.databases.documents.patch
+        args:
+          name: ${doc_name}
+          updateMask:
+            fieldPaths:
+              - "status"
+              - "updated_at"
+              - "width"
+              - "height"
+              - "duration"
+          body:
+            fields:
+              status:
+                stringValue: "COMPLETED"
+              updated_at:
+                stringValue: ${current_time}
+              width:
+                integerValue: ${job_data.output.videoStreams[0].width}
+              height:
+                integerValue: ${job_data.output.videoStreams[0].height}
+              duration:
+                integerValue: ${job_data.output.duration}
+
+    - handle_failure:
+        call: googleapis.firestore.v1.projects.databases.documents.patch
+        args:
+          name: ${doc_name}
+          updateMask:
+            fieldPaths:
+              - "status"
+              - "updated_at"
+          body:
+            fields:
+              status:
+                stringValue: "FAILED"
+              updated_at:
+                stringValue: ${current_time}
+
+    - handle_unknown:
+        call: sys.log
+        args:
+          severity: "WARNING"
+          json:
+            message: "Received unknown job state"
+            video_id: ${video_id}
+            job_name: ${job_name}
+            state: ${state}
