@@ -49,7 +49,7 @@ main:
               video_id:
                 stringValue: ${video_id}
               original_filename:
-                stringValue: ${original_filename}
+                stringValue: ${object}
               status:
                 stringValue: "PENDING"
               input_uri:
