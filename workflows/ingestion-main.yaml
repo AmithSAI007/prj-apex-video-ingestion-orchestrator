@@ -78,8 +78,9 @@ main:
             inputUri: ${input_uri}
             outputUri: ${output_uri}
             templateId: ${template_id}
-            pubsubDestination:
-              topic: ${"projects/" + project_id + "/topics/" + topic_name}
+            config:
+              pubsubDestination:
+                topic: ${"projects/" + project_id + "/topics/" + topic_name}
             labels:
               video_id: ${video_id}
 
