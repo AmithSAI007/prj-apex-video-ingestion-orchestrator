@@ -6,7 +6,7 @@ main:
           - project_id: ${sys.get_env("GOOGLE_CLOUD_PROJECT_ID")}
           - project_region: ${sys.get_env("GOOGLE_CLOUD_LOCATION")}
           - video_id: ${sys.get_env("GOOGLE_CLOUD_WORKFLOW_EXECUTION_ID")}
-          - firestore_db: ${sys.get_env("GOOGLE_CLOUD_FIRESTORE_DB")}
+          - firestore_db: ${sys.get_env("FIRESTORE_DB")}
           - event_type: ${event.type}
           - bucket: ${event.bucket}
           - object: ${event.data.name}
