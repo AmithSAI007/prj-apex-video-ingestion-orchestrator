@@ -17,7 +17,6 @@ resource "google_eventarc_trigger" "storage_trigger" {
   service_account = var.service_account_name
 }
 
-
 resource "google_eventarc_trigger" "trancode_completion_trigger" {
   name     = var.completion_trigger_name
   location = var.project_region
