@@ -7,7 +7,6 @@ module "storage" {
   source = "../../modules/storage"
 }
 
-
 module "eventarc_trigger" {
   source                 = "../../modules/triggers"
   project_id             = var.project_id
