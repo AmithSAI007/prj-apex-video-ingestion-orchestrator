@@ -10,7 +10,6 @@ main:
           - job_data: ${json.decode(text.decode(pubsub_message_bytes))}
           - state: ${job_data.state}
           - job_name: ${job_data.name}
-          - doc_name: ${"projects/" + project_id + "/databases/" + firestore_db + "/documents/videos/" + video_id}
           - current_time: ${time.format(sys.now())}
 
     - get_job_details:
@@ -27,6 +26,7 @@ main:
           - codec_settings: ${default(video_stream.h264, default(video_stream.h265, video_stream.vp9))}
           - width: ${int(default(codec_settings.widthPixels, 0))}
           - height: ${int(default(codec_settings.heightPixels, 0))}
+          - doc_name: ${"projects/" + project_id + "/databases/" + firestore_db + "/documents/videos/" + video_id}
 
     - log_completion:
         call: sys.log
