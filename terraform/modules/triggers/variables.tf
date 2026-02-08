@@ -37,3 +37,15 @@ variable "workflow_name" {
   type        = string
   default     = "prj-apex-video-orchestrator"
 }
+
+variable "completion_trigger_name" {
+  description = "The name of the Eventarc trigger."
+  type        = string
+  default     = "apex-transcoder-completion-workflow-trigger"
+}
+
+variable "completion_workflow_name" {
+  description = "The name of the Workflow to be triggered by Eventarc."
+  type        = string
+  default     = "apex-transcoder-status-topic"
+}

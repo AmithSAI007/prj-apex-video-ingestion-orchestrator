@@ -49,8 +49,8 @@ jobs:
             echo "dir=./terraform/environments/$ENVIRONMENT" >> $GITHUB_OUTPUT
           fi
 
-  deploy:
-    name: "Deploy workflow"
+  upload_artifacts:
+    name: "Upload Artifacts for Terraform"
     needs: determine_environment
     runs-on: ubuntu-24.04
     environment: ${{ needs.determine_environment.outputs.environment }}
@@ -62,32 +62,11 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
 
-      - name: Authenticate with GCP
-        uses: google-github-actions/auth@v2
-        with:
-          workload_identity_provider: ${{ secrets.WORKLOAD_IDENTITY }}
-          service_account: ${{ secrets.SERVICE_ACCOUNT }}
-
-      - name: "Set up Cloud SDK"
-        uses: "google-github-actions/setup-gcloud@v3"
-        with:
-          version: ">= 363.0.0"
-          project_id: ${{ secrets.PROJECT_ID }}
-
-      - name: "Deploy Cloud Workflow"
-        run: |
-          gcloud workflows deploy prj-apex-video-orchestrator \
-            --source=./workflows/ingestion-main.yaml \
-            --location=${{ secrets.PROJECT_REGION }} \
-            --project=${{ secrets.PROJECT_ID }} \
-            --call-log-level=log-all-calls \
-            --service-account=${{ secrets.SERVICE_ACCOUNT }} \
-            --set-env-vars=TRANSCODER_TEMPLATE_ID=${{ secrets.TRANSCODER_TEMPLATE_ID }},FIRESTORE_DB=${{ secrets.FIRESTORE_DB }}
-
       - name: Create Terraform Config
         run: |
           cat <<EOF > deploy.tfvars.json
           {
+            "transcoder_template_id": "${{ secrets.TRANSCODER_TEMPLATE_ID }}",
             "deployment_timestamp": "$(date +%s)",
             "app_version": "${{ github.sha }}"
           }
@@ -102,7 +81,7 @@ jobs:
 
   call-reusable-terraform:
     name: "Execute Terraform Core Logic"
-    needs: [determine_environment, deploy]
+    needs: [determine_environment, upload_artifacts]
     uses: AmithSAI007/prj-apex-infrastructure/.github/workflows/reusable-terraform-core.yaml@develop
     with:
       environment: ${{ needs.determine_environment.outputs.environment }}
