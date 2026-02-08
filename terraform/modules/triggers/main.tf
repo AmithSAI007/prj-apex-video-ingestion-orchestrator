@@ -14,9 +14,5 @@ resource "google_eventarc_trigger" "storage_trigger" {
     workflow = "projects/${var.project_id}/locations/${var.project_region}/workflows/${var.workflow_name}"
   }
 
-  retry_policy {
-    max_attempts = 1
-  }
-
   service_account = var.service_account_name
 }
