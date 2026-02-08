@@ -6,12 +6,12 @@ main:
           - project_id: ${sys.get_env("PROJECT_ID")}
           - event_type: ${event.type}
           - bucket: ${event.bucket}
-          - object: ${event.name}
+          - object: ${event.data.name}
 
     - log_event:
         call: sys.log
         args:
-          text: "Received event: ${event.type} for bucket: ${event.bucket} and object: ${event.name}"
+          text: "Received event: ${event.type} for bucket: ${event.bucket} and object: ${event.data.name}"
           severity: "INFO"
           json:
             event_payload: ${event}
