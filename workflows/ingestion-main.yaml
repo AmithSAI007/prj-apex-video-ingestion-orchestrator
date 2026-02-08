@@ -23,10 +23,10 @@ main:
         call: googleapis.video.transcoder.jobs.create
         args:
           parent: "projects/${project_id}/locations/${project_region}"
-        job:
-          inputUri: ${input_uri}
-          outputUri: ${output_uri}
-          templateId: ${template_id}
+          job:
+            inputUri: ${input_uri}
+            outputUri: ${output_uri}
+            templateId: ${template_id}
         result: transcoding_result
 
     - log_job_creation:
