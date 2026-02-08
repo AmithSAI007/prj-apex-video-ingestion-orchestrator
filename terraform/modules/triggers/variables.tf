@@ -16,11 +16,6 @@ variable "project_region" {
   }
 }
 
-variable "service_name" {
-  description = "The name of the Cloud Run service."
-  type        = string
-}
-
 variable "trigger_name" {
   description = "The name of the Eventarc trigger."
   type        = string
