@@ -20,7 +20,7 @@ main:
             event_payload: ${event}
 
     - start_transcoding_job:
-        call: googleapis.video.transcoder.jobs.create
+        call: googleapis.transcoder.v1.projects.locations.jobs.create
         args:
           parent: "projects/${project_id}/locations/${project_region}"
           job:
