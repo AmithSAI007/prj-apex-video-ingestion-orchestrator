@@ -3,7 +3,7 @@ resource "google_workflows_workflow" "video_orchestrator" {
   region          = var.project_region
   service_account = var.service_account_name
 
-  source_contents = file("${path.module}/../workflows/ingestion-main.yaml")
+  source_contents = file("${path.module}/../../workflows/ingestion-main.yaml")
 
   user_env_vars = {
     PROJECT_ID             = var.project_id
