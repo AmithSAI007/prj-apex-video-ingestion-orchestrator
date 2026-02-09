@@ -37,7 +37,7 @@ main:
             video_id: ${video_id}
             job_name: ${job_name}
             state: ${state}
-            job_data: ${job_data}
+            raw_payload.job: ${raw_payload.job}
 
     - check_status:
         switch:
@@ -57,19 +57,17 @@ main:
               - "updated_at"
               - "width"
               - "height"
-              - "duration"
           body:
             fields:
               status:
                 stringValue: "COMPLETED"
               updated_at:
-                stringValue: ${current_time}
+                timestampValue: ${current_time}
               width:
-                integerValue: ${job_data.output.videoStreams[0].width}
+                integerValue: ${width}
               height:
-                integerValue: ${job_data.output.videoStreams[0].height}
-              duration:
-                integerValue: ${job_data.output.duration}
+                integerValue: ${height}
+        next: return_success
 
     - handle_failure:
         call: googleapis.firestore.v1.projects.databases.documents.patch
@@ -84,7 +82,8 @@ main:
               status:
                 stringValue: "FAILED"
               updated_at:
-                stringValue: ${current_time}
+                timestampValue: ${current_time}
+        next: return_failure
 
     - handle_unknown:
         call: sys.log
@@ -95,3 +94,11 @@ main:
             video_id: ${video_id}
             job_name: ${job_name}
             state: ${state}
+        next: return_unknown
+
+    - return_success:
+        return: "Video Completed"
+    - return_failure:
+        return: "Video Failed"
+    - return_unknown:
+        return: "Unknown State"
