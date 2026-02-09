@@ -96,18 +96,33 @@ main:
               - ai_branch:
                   steps:
                     - start_ai_analysis:
-                        call: googleapis.videointelligence.v1.videos.annotate
-                        args:
-                          body:
-                            inputUri: ${input_uri}
-                            features:
-                              [
-                                "LABEL_DETECTION",
-                                "SHOT_CHANGE_DETECTION",
-                                "EXPLICIT_CONTENT_DETECTION",
-                              ]
-                            outputUri: ${output_uri_ai}
-                        result: ai_result
+                        try:
+                          call: http.post
+                          args:
+                            url: "https://videointelligence.googleapis.com/v1/videos:annotate"
+                            auth:
+                              type: OAuth2
+                            body:
+                              inputUri: ${input_uri}
+                              features:
+                                [
+                                  "LABEL_DETECTION",
+                                  "SHOT_CHANGE_DETECTION",
+                                  "EXPLICIT_CONTENT_DETECTION",
+                                ]
+                              outputUri: ${output_uri_ai}
+                          result: ai_result
+                        except:
+                          as: ai_error
+                          steps:
+                            - log_ai_failure:
+                                call: sys.log
+                                args:
+                                  severity: "ERROR"
+                                  json:
+                                    message: "AI Analysis failed to start"
+                                    error: ${ai_error}
+                                    video_id: ${video_id}
 
                     - log_ai_start:
                         call: sys.log
