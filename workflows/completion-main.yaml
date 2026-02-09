@@ -7,9 +7,9 @@ main:
           - project_region: ${sys.get_env("GOOGLE_CLOUD_LOCATION")}
           - firestore_db: ${sys.get_env("FIRESTORE_DB")}
           - pubsub_message_bytes: ${base64.decode(event.data.message.data)}
-          - job_data: ${json.decode(text.decode(pubsub_message_bytes))}
-          - state: ${job_data.state}
-          - job_name: ${job_data.name}
+          - raw_payload: ${json.decode(text.decode(pubsub_message_bytes))}
+          - state: ${raw_payload.job.state}
+          - job_name: ${raw_payload.job.name}
           - current_time: ${time.format(sys.now())}
 
     - get_job_details:
