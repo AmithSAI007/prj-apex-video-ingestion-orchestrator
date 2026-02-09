@@ -60,7 +60,7 @@ main:
                             labels:
                               video_id: ${video_id}
                         retry:
-                          predicate:
+                          predicate: ${http.default_retry_predicate}
                           max_retries: 3
                           backoff:
                             initial_delay: 2.0
@@ -92,15 +92,15 @@ main:
                               updated_at:
                                 timestampValue: ${time.format(sys.now())}
               - ai_branch:
-                steps:
-                  - log_ai_placeholder:
-                      call: sys.log
-                      args:
-                        severity: "NOTICE"
-                        json:
-                          message: "AI Analysis - To Be Designed"
-                          video_id: ${video_id}
-                          note: "This branch is reserved for Video Intelligence API integration"
+                  steps:
+                    - log_ai_placeholder:
+                        call: sys.log
+                        args:
+                          severity: "NOTICE"
+                          json:
+                            message: "AI Analysis - To Be Designed"
+                            video_id: ${video_id}
+                            note: "This branch is reserved for Video Intelligence API integration"
         except:
           as: e
           steps:
