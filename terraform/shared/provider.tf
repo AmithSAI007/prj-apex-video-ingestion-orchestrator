@@ -1,3 +1,4 @@
+# Provider requirements and version pinning for consistent deployments.
 terraform {
   required_providers {
     google = {
@@ -7,6 +8,7 @@ terraform {
   }
 }
 
+# Configure the Google provider with environment-specific project and region.
 provider "google" {
   project = var.project_id
   region  = var.project_region

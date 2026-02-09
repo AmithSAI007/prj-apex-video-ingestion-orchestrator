@@ -1,6 +1,8 @@
+# Workflow triggered by Cloud Storage finalize events to start the pipeline.
 main:
   params: [event]
   steps:
+    # Collect input metadata and environment configuration.
     - init:
         assign:
           - project_id: ${sys.get_env("GOOGLE_CLOUD_PROJECT_ID")}
@@ -16,6 +18,7 @@ main:
           - doc_name: ${"projects/" + project_id + "/databases/" + firestore_db + "/documents/videos/" + video_id}
           - current_time: ${time.format(sys.now())}
 
+    # Emit a structured log entry for observability.
     - log_start:
         call: sys.log
         args:
@@ -25,6 +28,7 @@ main:
             video_id: ${video_id}
             file: ${object}
 
+    # Create the initial Firestore document to track workflow state.
     - create_firestore_doc:
         call: googleapis.firestore.v1.projects.databases.documents.patch
         args:
@@ -43,12 +47,14 @@ main:
               created_at:
                 timestampValue: ${current_time}
 
+    # Run transcoding and optional AI analysis in parallel with error handling.
     - process_media_safe:
         try:
           parallel:
             branches:
               - transcode_branch:
                   steps:
+                    # Kick off a Transcoder job for the uploaded asset.
                     - start_transcoding:
                         call: googleapis.transcoder.v1.projects.locations.jobs.create
                         args:
@@ -61,6 +67,7 @@ main:
                               video_id: ${video_id}
                         result: transcoding_result
 
+                    # Log successful job creation.
                     - log_transcoding_success:
                         call: sys.log
                         args:
@@ -69,6 +76,7 @@ main:
                             message: "Transcoding job started successfully"
                             transcoding_job: ${transcoding_result.name}
 
+                    # Persist job metadata and status transition in Firestore.
                     - update_status_processing:
                         call: googleapis.firestore.v1.projects.databases.documents.patch
                         args:
@@ -86,6 +94,7 @@ main:
                                 timestampValue: ${time.format(sys.now())}
               - ai_branch:
                   steps:
+                    # Placeholder for future AI/Video Intelligence integration.
                     - log_ai_placeholder:
                         call: sys.log
                         args:
@@ -97,6 +106,7 @@ main:
         except:
           as: e
           steps:
+            # Capture and log failures so operators can troubleshoot quickly.
             - log_error:
                 call: sys.log
                 args:
@@ -106,6 +116,7 @@ main:
                     error: ${e}
                     video_id: ${video_id}
 
+            # Mark the Firestore document as failed and attach the error detail.
             - set_failed_status:
                 call: googleapis.firestore.v1.projects.databases.documents.patch
                 args:
@@ -120,8 +131,10 @@ main:
                         timestampValue: ${time.format(sys.now())}
                       error_message:
                         stringValue: ${string(e)}
+            # Re-raise the error to surface the failure to the caller.
             - fail_execution:
                 raise: ${e}
+    # Return a succinct success payload to Eventarc.
     - return_result:
         return:
           message: "Event processed successfully"

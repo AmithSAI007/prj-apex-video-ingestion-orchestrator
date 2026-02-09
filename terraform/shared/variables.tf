@@ -1,3 +1,4 @@
+# Shared variables used across environments/modules.
 variable "project_id" {
   type        = string
   description = "The unique identifier for the GCP project for resource organization and billing."
