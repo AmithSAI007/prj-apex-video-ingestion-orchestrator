@@ -14,6 +14,7 @@ main:
           - object: ${event.data.name}
           - input_uri: ${"gs://" + bucket + "/" + object}
           - output_uri: ${"gs://apex-dev-gcs-processed-videos/output/" + video_id + "/"}
+          - output_uri_ai: ${"gs://apex-dev-gcs-video-metadata/ai_output/" + video_id + "/"}
           - template_id: ${sys.get_env("TRANSCODER_TEMPLATE_ID")}
           - doc_name: ${"projects/" + project_id + "/databases/" + firestore_db + "/documents/videos/" + video_id}
           - current_time: ${time.format(sys.now())}
@@ -94,15 +95,28 @@ main:
                                 timestampValue: ${time.format(sys.now())}
               - ai_branch:
                   steps:
-                    # Placeholder for future AI/Video Intelligence integration.
-                    - log_ai_placeholder:
+                    - start_ai_analysis:
+                        call: googleapis.videointelligence.v1.videos.annotate
+                        args:
+                          body:
+                            inputUri: ${input_uri}
+                            features:
+                              [
+                                "LABEL_DETECTION",
+                                "SHOT_CHANGE_DETECTION",
+                                "EXPLICIT_CONTENT_DETECTION",
+                              ]
+                            outputUri: ${output_uri_ai}
+                        result: ai_result
+
+                    - log_ai_start:
                         call: sys.log
                         args:
-                          severity: "NOTICE"
+                          severity: "INFO"
                           json:
-                            message: "AI Analysis - To Be Designed"
-                            video_id: ${video_id}
-                            note: "This branch is reserved for Video Intelligence API integration"
+                            message: "AI Analysis started"
+                            ideo_id: ${video_id}
+                            operation: ${ai_result.name}
         except:
           as: e
           steps:

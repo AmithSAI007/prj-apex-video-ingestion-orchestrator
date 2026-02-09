@@ -1,12 +1,14 @@
 # prj-apex-video-ingestion-orchestrator
 
 ## Overview
+
 This repository defines the infrastructure and workflow orchestration for the Apex video ingestion
 pipeline on Google Cloud. Terraform modules wire together Eventarc triggers, Cloud Workflows,
 Pub/Sub, Cloud Storage, and Firestore so that uploaded videos automatically kick off Transcoder jobs
 and downstream metadata updates.
 
 ## Architecture Flow
+
 1. **Raw upload**: A video is uploaded to the raw Cloud Storage bucket.
 2. **Ingestion workflow**: Eventarc invokes the ingestion workflow on object finalization.
 3. **Transcoding**: The workflow creates a Transcoder job and writes initial metadata to Firestore.
@@ -14,6 +16,7 @@ and downstream metadata updates.
    completion workflow, which updates Firestore with the job outcome.
 
 ## Repository Layout
+
 - `terraform/environments/development`: Environment composition and backend configuration.
 - `terraform/modules/iam`: Service account lookup for workflow execution.
 - `terraform/modules/storage`: Existing raw/processed Cloud Storage buckets.
@@ -24,6 +27,7 @@ and downstream metadata updates.
 - `workflows/completion-main.yaml`: Completion workflow definition.
 
 ## Prerequisites
+
 - Terraform 1.x installed locally.
 - A Google Cloud project with the following APIs enabled:
   - Cloud Workflows
@@ -37,21 +41,23 @@ and downstream metadata updates.
 - A service account with permission to run Eventarc and Workflows actions.
 
 ## Configuration
+
 Provide environment-specific values in `terraform/environments/development/terraform.tfvars` or via
 `-var` arguments. Key inputs include:
 
-| Variable | Description |
-| --- | --- |
-| `project_id` | Google Cloud project identifier. |
-| `project_region` | Region for Eventarc and Workflows. |
-| `service_account_name` | Service account that executes workflows. |
-| `transcoder_template_id` | Transcoder template for video processing jobs. |
-| `workflow_name` | Name for the ingestion workflow. |
-| `completion_workflow_name` | Name for the completion workflow. |
-| `firestore_db_name` | Firestore database used for video metadata. |
+| Variable                       | Description                                     |
+| ------------------------------ | ----------------------------------------------- |
+| `project_id`                   | Google Cloud project identifier.                |
+| `project_region`               | Region for Eventarc and Workflows.              |
+| `service_account_name`         | Service account that executes workflows.        |
+| `transcoder_template_id`       | Transcoder template for video processing jobs.  |
+| `workflow_name`                | Name for the ingestion workflow.                |
+| `completion_workflow_name`     | Name for the completion workflow.               |
+| `firestore_db_name`            | Firestore database used for video metadata.     |
 | `completion_pubsub_topic_name` | Pub/Sub topic for Transcoder completion events. |
 
 Example `terraform.tfvars`:
+
 ```hcl
 project_id                   = "my-gcp-project"
 project_region               = "us-central1"
@@ -64,6 +70,7 @@ completion_pubsub_topic_name = "apex-transcoder-status-topic"
 ```
 
 ## Deploying
+
 ```bash
 cd terraform/environments/development
 terraform init
@@ -75,11 +82,13 @@ terraform apply -var-file=terraform.tfvars
 > those resources exist before applying.
 
 ## Workflows Summary
+
 - **Ingestion workflow (`workflows/ingestion-main.yaml`)**: Initializes metadata, starts a
   Transcoder job, logs progress, and updates Firestore for processing status.
 - **Completion workflow (`workflows/completion-main.yaml`)**: Reads Pub/Sub completion messages,
   fetches job details, and updates Firestore with final status and resolution.
 
 ## Observability
+
 Both workflows emit structured logs via `sys.log`, which surface in Cloud Logging for debugging and
 operational dashboards.
