@@ -12,89 +12,101 @@ main:
           - job_name: ${raw_payload.job.name}
           - current_time: ${time.format(sys.now())}
 
-    - get_job_details:
-        call: googleapis.transcoder.v1.projects.locations.jobs.get
-        args:
-          name: ${job_name}
-        result: full_job
+    - process_completion:
+        try:
+          steps:
+            - get_job_details:
+                call: googleapis.transcoder.v1.projects.locations.jobs.get
+                args:
+                  name: ${job_name}
+                result: full_job
 
-    - extract_metadata:
-        assign:
-          - video_id: ${full_job.labels.video_id}
-          - doc_name: ${"projects/" + project_id + "/databases/(default)/documents/videos/" + video_id}
-          - video_stream: ${full_job.config.elementaryStreams[0].videoStream}
-          - codec_settings: ${video_stream.h264}
-          - width: ${int(default(codec_settings.widthPixels, 0))}
-          - height: ${int(default(codec_settings.heightPixels, 0))}
-          - doc_name: ${"projects/" + project_id + "/databases/" + firestore_db + "/documents/videos/" + video_id}
+            - extract_metadata:
+                assign:
+                  - video_id: ${full_job.labels.video_id}
+                  - doc_name: ${"projects/" + project_id + "/databases/(default)/documents/videos/" + video_id}
+                  - video_stream: ${full_job.config.elementaryStreams[0].videoStream}
+                  - codec_settings: ${video_stream.h264}
+                  - width: ${int(default(codec_settings.widthPixels, 0))}
+                  - height: ${int(default(codec_settings.heightPixels, 0))}
+                  - doc_name: ${"projects/" + project_id + "/databases/" + firestore_db + "/documents/videos/" + video_id}
 
-    - log_completion:
-        call: sys.log
-        args:
-          severity: "INFO"
-          json:
-            message: "Transcoding job completed"
-            video_id: ${video_id}
-            job_name: ${job_name}
-            state: ${state}
-            raw_payload.job: ${raw_payload.job}
+            - log_completion:
+                call: sys.log
+                args:
+                  severity: "INFO"
+                  json:
+                    message: "Transcoding job completed"
+                    video_id: ${video_id}
+                    state: ${state}
+                    resolution: ${string(width) + "x" + string(height)}
 
-    - check_status:
-        switch:
-          - condition: ${state == "SUCCEEDED"}
-            next: handle_success
-          - condition: ${state == "FAILED"}
-            next: handle_failure
-        next: handle_unknown
+            - check_status:
+                switch:
+                  - condition: ${state == "SUCCEEDED"}
+                    next: handle_success
+                  - condition: ${state == "FAILED"}
+                    next: handle_failure
+                next: handle_unknown
 
-    - handle_success:
-        call: googleapis.firestore.v1.projects.databases.documents.patch
-        args:
-          name: ${doc_name}
-          updateMask:
-            fieldPaths:
-              - "status"
-              - "updated_at"
-              - "width"
-              - "height"
-          body:
-            fields:
-              status:
-                stringValue: "COMPLETED"
-              updated_at:
-                timestampValue: ${current_time}
-              width:
-                integerValue: ${width}
-              height:
-                integerValue: ${height}
-        next: return_success
+            - handle_success:
+                call: googleapis.firestore.v1.projects.databases.documents.patch
+                args:
+                  name: ${doc_name}
+                  updateMask:
+                    fieldPaths: ["status", "updated_at", "width", "height"]
+                  body:
+                    fields:
+                      status:
+                        stringValue: "COMPLETED"
+                      updated_at:
+                        timestampValue: ${current_time}
+                      width:
+                        integerValue: ${width}
+                      height:
+                        integerValue: ${height}
+                next: return_success
 
-    - handle_failure:
-        call: googleapis.firestore.v1.projects.databases.documents.patch
-        args:
-          name: ${doc_name}
-          updateMask:
-            fieldPaths:
-              - "status"
-              - "updated_at"
-          body:
-            fields:
-              status:
-                stringValue: "FAILED"
-              updated_at:
-                timestampValue: ${current_time}
-        next: return_failure
+            - handle_failure:
+                call: googleapis.firestore.v1.projects.databases.documents.patch
+                args:
+                  name: ${doc_name}
+                  updateMask:
+                    fieldPaths: ["status", "updated_at", "error_message"]
+                  body:
+                    fields:
+                      status:
+                        stringValue: "FAILED"
+                      updated_at:
+                        timestampValue: ${current_time}
+                      error_message:
+                        stringValue: ${default(full_job.error.message, "Unknown Transcoder Error")}
+                next: return_failure
 
-    - handle_unknown:
-        call: sys.log
-        args:
-          severity: "WARNING"
-          json:
-            message: "Received unknown job state"
-            video_id: ${video_id}
-            job_name: ${job_name}
-            state: ${state}
-        next: return_unknown
+            - handle_unknown:
+                call: sys.log
+                args:
+                  severity: "WARNING"
+                  json:
+                    message: "Received unknown job state"
+                    video_id: ${video_id}
+                    state: ${state}
+                next: return_unknown
+
+        except:
+          as: e
+          steps:
+            - log_error:
+                call: sys.log
+                args:
+                  severity: "ERROR"
+                  json:
+                    message: "Error processing transcoding completion"
+                    error: ${e}
+                    video_id: ${video_id}
+
+            - fail_execution:
+                raise: ${e}
 
     - return_success:
         return: "Video Completed"
