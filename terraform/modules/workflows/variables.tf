@@ -1,3 +1,4 @@
+# Project identifier used for workflow resource names.
 variable "project_id" {
   type        = string
   description = "The unique identifier for the GCP project for resource organization and billing."
@@ -7,6 +8,7 @@ variable "project_id" {
   }
 }
 
+# Region where workflows run.
 variable "project_region" {
   type        = string
   description = "The GCP region where the resources will be deployed, impacting latency and compliance."
@@ -16,31 +18,37 @@ variable "project_region" {
   }
 }
 
+# Service account that executes workflow steps.
 variable "service_account_name" {
   description = "The service account name to be used by the Cloud Run service."
   type        = string
 }
 
+# Transcoder template to apply to ingestion jobs.
 variable "transcoder_template_id" {
   description = "The ID of the Transcoder template to be used for video processing."
   type        = string
 }
 
+# Bucket used to store processed video assets.
 variable "processed_bucket_name" {
   description = "The name of the Cloud Storage bucket where processed videos will be stored."
   type        = string
 }
 
+# Display name for the ingestion workflow.
 variable "workflow_name" {
   description = "The name of the Workflow to be triggered by Eventarc."
   type        = string
 }
 
+# Display name for the completion workflow.
 variable "completion_workflow_name" {
   description = "The name of the Workflow to be triggered by Eventarc."
   type        = string
 }
 
+# Firestore database used to persist video metadata.
 variable "firestore_db_name" {
   description = "The name of the Firestore database to be used for storing video metadata."
   type        = string
