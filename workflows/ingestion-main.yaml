@@ -14,7 +14,7 @@ main:
           - object: ${event.data.name}
           - input_uri: ${"gs://" + bucket + "/" + object}
           - output_uri: ${"gs://apex-dev-gcs-processed-videos/output/" + video_id + "/"}
-          - output_uri_ai: ${"gs://apex-dev-gcs-video-metadata/ai_output/" + video_id + "/"}
+          - output_uri_ai: ${"gs://apex-dev-gcs-video-metadata/" + video_id + "/"}
           - template_id: ${sys.get_env("TRANSCODER_TEMPLATE_ID")}
           - doc_name: ${"projects/" + project_id + "/databases/" + firestore_db + "/documents/videos/" + video_id}
           - current_time: ${time.format(sys.now())}
@@ -130,8 +130,7 @@ main:
                           severity: "INFO"
                           json:
                             message: "AI Analysis started"
-                            ideo_id: ${video_id}
-                            operation: ${ai_result.name}
+                            video_id: ${video_id}
         except:
           as: e
           steps:
@@ -159,7 +158,7 @@ main:
                       updated_at:
                         timestampValue: ${time.format(sys.now())}
                       error_message:
-                        stringValue: ${string(e)}
+                        stringValue: ${json.encode(e)}
             # Re-raise the error to surface the failure to the caller.
             - fail_execution:
                 raise: ${e}
