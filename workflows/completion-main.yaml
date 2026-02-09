@@ -23,7 +23,7 @@ main:
           - video_id: ${full_job.labels.video_id}
           - doc_name: ${"projects/" + project_id + "/databases/(default)/documents/videos/" + video_id}
           - video_stream: ${full_job.config.elementaryStreams[0].videoStream}
-          - codec_settings: ${default(video_stream.h264, default(video_stream.h265, video_stream.vp9))}
+          - codec_settings: ${video_stream.h264}
           - width: ${int(default(codec_settings.widthPixels, 0))}
           - height: ${int(default(codec_settings.heightPixels, 0))}
           - doc_name: ${"projects/" + project_id + "/databases/" + firestore_db + "/documents/videos/" + video_id}
