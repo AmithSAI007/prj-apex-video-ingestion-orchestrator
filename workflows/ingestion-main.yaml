@@ -59,13 +59,6 @@ main:
                             templateId: ${template_id}
                             labels:
                               video_id: ${video_id}
-                        retry:
-                          predicate: ${http.default_retry_predicate}
-                          max_retries: 3
-                          backoff:
-                            initial_delay: 2.0
-                            max_delay: 60.0
-                            multiplier: 2.0
                         result: transcoding_result
 
                     - log_transcoding_success:
