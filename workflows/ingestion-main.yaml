@@ -21,6 +21,8 @@ main:
           - current_time: ${time.format(sys.now())}
 
     # Deduplication: Check if this video has already been processed or is processing.
+    # We use the calculated video_id (file hash) to look up the Firestore document.
+    # If the document doesn't exist (404), 'except' block handles it and we proceed.
     - check_duplicate:
         try:
           call: googleapis.firestore.v1.projects.databases.documents.get

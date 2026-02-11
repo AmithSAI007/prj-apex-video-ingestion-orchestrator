@@ -43,3 +43,9 @@ module "workflows" {
   firestore_db_name        = var.firestore_db_name
 
 }
+
+module "tasks" {
+  source                = "../../modules/tasks"
+  project_region        = var.project_region
+  transcoder_queue_name = var.transcoder_queue_name
+}
