@@ -14,7 +14,7 @@ main:
           - object: ${event.data.name}
           - input_uri: ${"gs://" + bucket + "/" + object}
           - output_uri: ${"gs://apex-dev-gcs-processed-videos/output/" + video_id + "/"}
-          - output_uri_ai: ${"gs://apex-dev-gcs-video-metadata/" + video_id + "/"}
+          - output_uri_ai: ${"gs://apex-dev-gcs-video-metadata/" + video_id + "/video_analysis.json"}
           - template_id: ${sys.get_env("TRANSCODER_TEMPLATE_ID")}
           - doc_name: ${"projects/" + project_id + "/databases/" + firestore_db + "/documents/videos/" + video_id}
           - current_time: ${time.format(sys.now())}

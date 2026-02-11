@@ -4,13 +4,3 @@ variable "service_account_name" {
   type        = string
   default     = "prj-apex-cr-start-transcode-sa"
 }
-
-variable "project_id" {
-  description = "The project ID."
-  type        = string
-}
-
-variable "video_metadata_bucket_name" {
-  description = "The name of the bucket where video metadata is stored."
-  type        = string
-}
