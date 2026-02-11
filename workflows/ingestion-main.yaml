@@ -32,10 +32,11 @@ main:
         except:
           as: e
           steps:
-            - ignore_not_found:
+            - check_not_found:
                 switch:
                   - condition: ${e.code == 404}
                     next: log_start # Document doesn't exist, proceed
+            - reraise_error:
                 raise: ${e} # Real error, propagate
 
     - analyze_existing:
