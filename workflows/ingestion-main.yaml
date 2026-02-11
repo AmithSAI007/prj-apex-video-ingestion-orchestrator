@@ -54,7 +54,7 @@ main:
             video_id: ${video_id}
             file: ${object}
 
-    # Create the initial Firestore document to track workflow state.
+    # Create the initial Firestore document to track workflow state
     - create_firestore_doc:
         call: googleapis.firestore.v1.projects.databases.documents.patch
         args:
