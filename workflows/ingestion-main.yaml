@@ -7,7 +7,8 @@ main:
         assign:
           - project_id: ${sys.get_env("GOOGLE_CLOUD_PROJECT_ID")}
           - project_region: ${sys.get_env("GOOGLE_CLOUD_LOCATION")}
-          - video_id: ${sys.get_env("GOOGLE_CLOUD_WORKFLOW_EXECUTION_ID")}
+          - raw_hash: ${default(event.data.md5Hash, sys.get_env("GOOGLE_CLOUD_WORKFLOW_EXECUTION_ID"))}
+          - video_id: ${text.replace(text.replace(text.replace(raw_hash, "/", "_"), "+", "-"), "=", "")}
           - firestore_db: ${sys.get_env("FIRESTORE_DB")}
           - event_type: ${event.type}
           - bucket: ${event.bucket}
@@ -18,6 +19,27 @@ main:
           - template_id: ${sys.get_env("TRANSCODER_TEMPLATE_ID")}
           - doc_name: ${"projects/" + project_id + "/databases/" + firestore_db + "/documents/videos/" + video_id}
           - current_time: ${time.format(sys.now())}
+
+    # Deduplication: Check if this video has already been processed or is processing.
+    - check_duplicate:
+        try:
+          call: googleapis.firestore.v1.projects.databases.documents.get
+          args:
+            name: ${doc_name}
+          result: existing_doc
+        except:
+          as: e
+          steps:
+            - ignore_not_found:
+                switch:
+                  - condition: ${e.code == 404}
+                    next: log_start # Document doesn't exist, proceed
+                raise: ${e} # Real error, propagate
+
+    - analyze_existing:
+        switch:
+          - condition: ${"fields" in existing_doc and "status" in existing_doc.fields and (existing_doc.fields.status.stringValue == "PROCESSING" or existing_doc.fields.status.stringValue == "COMPLETED")}
+            next: return_duplicate
 
     # Emit a structured log entry for observability.
     - log_start:
@@ -167,3 +189,9 @@ main:
         return:
           message: "Event processed successfully"
           status: "success"
+
+    - return_duplicate:
+        return:
+          message: "Video already processed or in progress. Skipping."
+          status: "skipped"
+          video_id: ${video_id}
