@@ -1,0 +1,95 @@
+name: Deploy Cloud Workflow
+on:
+  workflow_dispatch:
+    inputs:
+      environment:
+        description: "Target Environment"
+        required: true
+        default: "development"
+        type: choice
+        options:
+          - development
+          - production
+  push:
+    branches:
+      - main
+      - develop
+  pull_request:
+    branches:
+      - main
+      - develop
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  id-token: write
+  contents: read
+  pull-requests: write
+  issues: write
+
+jobs:
+  determine_environment:
+    name: "Determine Environment"
+    runs-on: ubuntu-24.04
+    outputs:
+      environment: ${{ steps.get_env.outputs.environment }}
+      dir: ${{ steps.get_env.outputs.dir }}
+    steps:
+      - id: get_env
+        name: Set environment for this workflow run
+        run: |
+          if [ "${{ github.event_name }}" == "pull_request" ]; then
+            echo "environment=development" >> $GITHUB_OUTPUT
+            echo "dir=./terraform/environments/development" >> $GITHUB_OUTPUT
+          else
+            ENVIRONMENT="${{ github.event.inputs.environment || (github.ref == 'refs/heads/main' && 'production' || 'development') }}"
+            echo "environment=$ENVIRONMENT" >> $GITHUB_OUTPUT
+            echo "dir=./terraform/environments/$ENVIRONMENT" >> $GITHUB_OUTPUT
+          fi
+
+  upload_artifacts:
+    name: "Upload Artifacts for Terraform"
+    needs: determine_environment
+    runs-on: ubuntu-24.04
+    environment: ${{ needs.determine_environment.outputs.environment }}
+    permissions:
+      contents: read
+      id-token: write
+      security-events: write
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Create Terraform Config
+        run: |
+          cat <<EOF > deploy.tfvars.json
+          {
+            "transcoder_template_id": "${{ secrets.TRANSCODER_TEMPLATE_ID }}",
+            "deployment_timestamp": "$(date +%s)",
+            "app_version": "${{ github.sha }}"
+          }
+          EOF
+
+      - name: Upload Config
+        uses: actions/upload-artifact@v4
+        with:
+          name: terraform-config
+          path: deploy.tfvars.json
+          retention-days: 1
+
+  call-reusable-terraform:
+    name: "Execute Terraform Core Logic"
+    needs: [determine_environment, upload_artifacts]
+    uses: AmithSAI007/prj-apex-infrastructure/.github/workflows/reusable-terraform-core.yaml@develop
+    with:
+      environment: ${{ needs.determine_environment.outputs.environment }}
+      terraform_directory: ${{ needs.determine_environment.outputs.dir }}
+      is_pull_request: ${{ github.event_name == 'pull_request' }}
+
+    secrets:
+      PROJECT_ID: ${{ secrets.PROJECT_ID }}
+      WORKLOAD_IDENTITY: ${{ secrets.WORKLOAD_IDENTITY }}
+      SERVICE_ACCOUNT: ${{ secrets.SERVICE_ACCOUNT }}
+      PROJECT_REGION: ${{ secrets.PROJECT_REGION }}

@@ -1,0 +1,129 @@
+# Workflow triggered by Pub/Sub completion notifications from Transcoder.
+main:
+  params: [event]
+  steps:
+    # Decode the Pub/Sub payload and cache shared context.
+    - init:
+        assign:
+          - project_id: ${sys.get_env("GOOGLE_CLOUD_PROJECT_ID")}
+          - project_region: ${sys.get_env("GOOGLE_CLOUD_LOCATION")}
+          - firestore_db: ${sys.get_env("FIRESTORE_DB")}
+          - pubsub_message_bytes: ${base64.decode(event.data.message.data)}
+          - raw_payload: ${json.decode(text.decode(pubsub_message_bytes))}
+          - state: ${raw_payload.job.state}
+          - job_name: ${raw_payload.job.name}
+          - current_time: ${time.format(sys.now())}
+
+    # Retrieve job metadata, update Firestore, and log outcomes.
+    - process_completion:
+        try:
+          steps:
+            # Fetch full job metadata from the Transcoder API.
+            - get_job_details:
+                call: googleapis.transcoder.v1.projects.locations.jobs.get
+                args:
+                  name: ${job_name}
+                result: full_job
+
+            # Normalize metadata for use in logging and Firestore updates.
+            - extract_metadata:
+                assign:
+                  - video_id: ${full_job.labels.video_id}
+                  - doc_name: ${"projects/" + project_id + "/databases/(default)/documents/videos/" + video_id}
+                  - video_stream: ${full_job.config.elementaryStreams[0].videoStream}
+                  - codec_settings: ${video_stream.h264}
+                  - width: ${int(default(codec_settings.widthPixels, 0))}
+                  - height: ${int(default(codec_settings.heightPixels, 0))}
+                  - doc_name: ${"projects/" + project_id + "/databases/" + firestore_db + "/documents/videos/" + video_id}
+
+            # Emit a log record with job resolution details.
+            - log_completion:
+                call: sys.log
+                args:
+                  severity: "INFO"
+                  json:
+                    message: "Transcoding job completed"
+                    video_id: ${video_id}
+                    state: ${state}
+                    resolution: ${string(width) + "x" + string(height)}
+
+            # Route execution based on Transcoder job state.
+            - check_status:
+                switch:
+                  - condition: ${state == "SUCCEEDED"}
+                    next: handle_success
+                  - condition: ${state == "FAILED"}
+                    next: handle_failure
+                next: handle_unknown
+
+            # Persist a successful completion status and resolution.
+            - handle_success:
+                call: googleapis.firestore.v1.projects.databases.documents.patch
+                args:
+                  name: ${doc_name}
+                  updateMask:
+                    fieldPaths: ["status", "updated_at", "width", "height"]
+                  body:
+                    fields:
+                      status:
+                        stringValue: "COMPLETED"
+                      updated_at:
+                        timestampValue: ${current_time}
+                      width:
+                        integerValue: ${width}
+                      height:
+                        integerValue: ${height}
+                next: return_success
+
+            # Persist a failure status with error information.
+            - handle_failure:
+                call: googleapis.firestore.v1.projects.databases.documents.patch
+                args:
+                  name: ${doc_name}
+                  updateMask:
+                    fieldPaths: ["status", "updated_at", "error_message"]
+                  body:
+                    fields:
+                      status:
+                        stringValue: "FAILED"
+                      updated_at:
+                        timestampValue: ${current_time}
+                      error_message:
+                        stringValue: ${default(full_job.error.message, "Unknown Transcoder Error")}
+                next: return_failure
+
+            # Log unexpected statuses for further investigation.
+            - handle_unknown:
+                call: sys.log
+                args:
+                  severity: "WARNING"
+                  json:
+                    message: "Received unknown job state"
+                    video_id: ${video_id}
+                    state: ${state}
+                next: return_unknown
+
+        except:
+          as: e
+          steps:
+            # Log and surface workflow errors.
+            - log_error:
+                call: sys.log
+                args:
+                  severity: "ERROR"
+                  json:
+                    message: "Error processing transcoding completion"
+                    error: ${e}
+                    video_id: ${video_id}
+
+            # Re-raise the error to ensure retries/alerts surface upstream.
+            - fail_execution:
+                raise: ${e}
+
+    # Terminal responses used by Eventarc/Workflows callers.
+    - return_success:
+        return: "Video Completed"
+    - return_failure:
+        return: "Video Failed"
+    - return_unknown:
+        return: "Unknown State"
