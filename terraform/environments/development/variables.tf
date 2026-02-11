@@ -54,3 +54,9 @@ variable "completion_pubsub_topic_name" {
   type        = string
   default     = "apex-transcoder-status-topic"
 }
+
+variable "video_metadata_bucket_name" {
+  description = "The name of the bucket where video metadata is stored."
+  type        = string
+  default     = "apex-dev-gcs-video-metadata"
+}

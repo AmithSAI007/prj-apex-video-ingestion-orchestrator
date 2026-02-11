@@ -5,8 +5,10 @@
 
 # Resolve the service account that Eventarc and Workflows run as.
 module "iam" {
-  source               = "../../modules/iam"
-  service_account_name = var.service_account_name
+  source                     = "../../modules/iam"
+  service_account_name       = var.service_account_name
+  project_id                 = var.project_id
+  video_metadata_bucket_name = var.video_metadata_bucket_name
 }
 
 # Reference existing storage buckets for raw and processed media.
