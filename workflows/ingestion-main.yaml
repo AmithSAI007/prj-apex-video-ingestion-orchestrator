@@ -8,7 +8,7 @@ main:
           - project_id: ${sys.get_env("GOOGLE_CLOUD_PROJECT_ID")}
           - project_region: ${sys.get_env("GOOGLE_CLOUD_LOCATION")}
           - raw_hash: ${default(event.data.md5Hash, sys.get_env("GOOGLE_CLOUD_WORKFLOW_EXECUTION_ID"))}
-          - video_id: ${text.replace(text.replace(text.replace(raw_hash, "/", "_"), "+", "-"), "=", "")}
+          - video_id: ${text.replace_all(text.replace_all(text.replace_all(raw_hash, "/", "_"), "+", "-"), "=", "")}
           - firestore_db: ${sys.get_env("FIRESTORE_DB")}
           - event_type: ${event.type}
           - bucket: ${event.bucket}
