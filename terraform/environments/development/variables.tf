@@ -43,6 +43,12 @@ variable "completion_workflow_name" {
   default     = "prj-apex-video-transcode-completion-workflow"
 }
 
+variable "worker_workflow_name" {
+  description = "The name of the Workflow to be triggered by Cloud Tasks for worker processing."
+  type        = string
+  default     = "prj-apex-video-processing-worker"
+}
+
 variable "firestore_db_name" {
   description = "The name of the Firestore database to be used for storing video metadata."
   type        = string
