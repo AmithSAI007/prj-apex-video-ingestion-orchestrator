@@ -53,3 +53,9 @@ variable "firestore_db_name" {
   description = "The name of the Firestore database to be used for storing video metadata."
   type        = string
 }
+
+variable "execution_history_level" {
+  description = "The level of execution history to retain for the workflow."
+  type        = string
+  default     = "EXECUTION_HISTORY_DETAILED"
+}
