@@ -1,8 +1,9 @@
 # Primary workflow that handles ingestion, logging, and job kick-off.
 resource "google_workflows_workflow" "video_orchestrator" {
-  name            = var.workflow_name
-  region          = var.project_region
-  service_account = var.service_account_name
+  name                    = var.workflow_name
+  region                  = var.project_region
+  service_account         = var.service_account_name
+  execution_history_level = var.execution_history_level
 
   # Load the ingestion workflow definition from the repository.
   source_contents = file("${path.module}/../../../workflows/ingestion-main.yaml")
@@ -19,9 +20,10 @@ resource "google_workflows_workflow" "video_orchestrator" {
 
 # Secondary workflow that handles Transcoder completion callbacks.
 resource "google_workflows_workflow" "transcode_completion_workflow" {
-  name            = var.completion_workflow_name
-  region          = var.project_region
-  service_account = var.service_account_name
+  name                    = var.completion_workflow_name
+  region                  = var.project_region
+  service_account         = var.service_account_name
+  execution_history_level = var.execution_history_level
 
   # Load the completion workflow definition from the repository.
   source_contents = file("${path.module}/../../../workflows/completion-main.yaml")
