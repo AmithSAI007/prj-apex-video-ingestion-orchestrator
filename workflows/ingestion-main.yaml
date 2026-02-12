@@ -83,7 +83,7 @@ main:
               output_uri: ${output_uri}
               output_uri_ai: ${output_uri_ai}
               template_id: ${template_id}
-          - worker_args_str: ${json.encode(worker_args)}
+          - worker_args_str: ${text.decode(json.encode(worker_args))}
           - api_body:
               argument: ${worker_args_str}
           - api_body_str: ${json.encode(api_body)}
