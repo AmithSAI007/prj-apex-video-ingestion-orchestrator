@@ -31,6 +31,12 @@ locals {
         FIRESTORE_DB = var.firestore_db_name
       }
     }
+    worker = {
+      name            = var.worker_workflow_name
+      description     = "Worker workflow triggered by Cloud Tasks to echo input payloads."
+      source_contents = file("${path.module}/../../../workflows/video-processing-worker.yaml")
+      env_vars        = {}
+    }
   }
 }
 
