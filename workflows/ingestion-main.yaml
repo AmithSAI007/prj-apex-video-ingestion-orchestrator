@@ -73,120 +73,39 @@ main:
               created_at:
                 timestampValue: ${current_time}
 
-    # Run transcoding and optional AI analysis in parallel with error handling.
-    - process_media_safe:
-        try:
-          parallel:
-            branches:
-              - transcode_branch:
-                  steps:
-                    # Kick off a Transcoder job for the uploaded asset.
-                    - start_transcoding:
-                        call: googleapis.transcoder.v1.projects.locations.jobs.create
-                        args:
-                          parent: ${"projects/" + project_id + "/locations/" + project_region}
-                          body:
-                            inputUri: ${input_uri}
-                            outputUri: ${output_uri}
-                            templateId: ${template_id}
-                            labels:
-                              video_id: ${video_id}
-                        result: transcoding_result
+    - prepare_payload:
+        assign:
+          - worker_workflow_id: "video-processing-worker"
+          - queue_id: "video-transcode-queue"
+          - worker_args:
+              video_id: ${video_id}
+              input_uri: ${input_uri}
+              output_uri: ${output_uri}
+              output_uri_ai: ${output_uri_ai}
+              template_id: ${template_id}
+          - worker_args_str: ${json.encode(worker_args)}
+          - api_body:
+              argument: ${worker_args_str}
+          - api_body_str: ${json.encode(api_body)}
+          - task_body_base64: ${base64.encode(api_body_str)}
+          - worker_url: ${"https://workflowexecutions.googleapis.com/v1/projects/" + project_id + "/locations/" + project_region + "/workflows/" + worker_workflow_id + "/executions"}
+          - queue_path: ${"projects/" + project_id + "/locations/" + project_region + "/queues/" + queue_id}
 
-                    # Log successful job creation.
-                    - log_transcoding_success:
-                        call: sys.log
-                        args:
-                          severity: "INFO"
-                          json:
-                            message: "Transcoding job started successfully"
-                            transcoding_job: ${transcoding_result.name}
+    # - create_task:
+    #     call: googleapis.cloudtasks.v2.projects.locations.queues.tasks.create
+    #     args:
+    #       parent: ${queue_path}
+    #       body:
+    #         task:
+    #           httpRequest:
+    #             httpMethod: "POST"
+    #             url: ${worker_url}
+    #             headers:
+    #               Content-Type: "application/json"
+    #             body: ${task_body_base64}
+    #             oauthToken:
+    #               serviceAccountEmail: ${sys.get_env("SERVICE_ACCOUNT_EMAIL")}
 
-                    # Persist job metadata and status transition in Firestore.
-                    - update_status_processing:
-                        call: googleapis.firestore.v1.projects.databases.documents.patch
-                        args:
-                          name: ${doc_name}
-                          updateMask:
-                            fieldPaths:
-                              ["transcoding_job_id", "status", "updated_at"]
-                          body:
-                            fields:
-                              transcoding_job_id:
-                                stringValue: ${transcoding_result.name}
-                              status:
-                                stringValue: "PROCESSING"
-                              updated_at:
-                                timestampValue: ${time.format(sys.now())}
-              - ai_branch:
-                  steps:
-                    - start_ai_analysis:
-                        try:
-                          call: http.post
-                          args:
-                            url: "https://videointelligence.googleapis.com/v1/videos:annotate"
-                            auth:
-                              type: OAuth2
-                            body:
-                              inputUri: ${input_uri}
-                              features:
-                                [
-                                  "LABEL_DETECTION",
-                                  "SHOT_CHANGE_DETECTION",
-                                  "EXPLICIT_CONTENT_DETECTION",
-                                ]
-                              outputUri: ${output_uri_ai}
-                          result: ai_result
-                        except:
-                          as: ai_error
-                          steps:
-                            - log_ai_failure:
-                                call: sys.log
-                                args:
-                                  severity: "ERROR"
-                                  json:
-                                    message: "AI Analysis failed to start"
-                                    error: ${ai_error}
-                                    video_id: ${video_id}
-
-                    - log_ai_start:
-                        call: sys.log
-                        args:
-                          severity: "INFO"
-                          json:
-                            message: "AI Analysis started"
-                            video_id: ${video_id}
-        except:
-          as: e
-          steps:
-            # Capture and log failures so operators can troubleshoot quickly.
-            - log_error:
-                call: sys.log
-                args:
-                  severity: "ERROR"
-                  json:
-                    message: "Error during media processing"
-                    error: ${e}
-                    video_id: ${video_id}
-
-            # Mark the Firestore document as failed and attach the error detail.
-            - set_failed_status:
-                call: googleapis.firestore.v1.projects.databases.documents.patch
-                args:
-                  name: ${doc_name}
-                  updateMask:
-                    fieldPaths: ["status", "updated_at", "error_message"]
-                  body:
-                    fields:
-                      status:
-                        stringValue: "ERROR"
-                      updated_at:
-                        timestampValue: ${time.format(sys.now())}
-                      error_message:
-                        stringValue: ${json.encode(e)}
-            # Re-raise the error to surface the failure to the caller.
-            - fail_execution:
-                raise: ${e}
     # Return a succinct success payload to Eventarc.
     - return_result:
         return:
