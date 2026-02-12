@@ -24,38 +24,18 @@ variable "service_account_name" {
   type        = string
 }
 
-# Transcoder template to apply to ingestion jobs.
-variable "transcoder_template_id" {
-  description = "The ID of the Transcoder template to be used for video processing."
-  type        = string
-}
-
-# Bucket used to store processed video assets.
-variable "processed_bucket_name" {
-  description = "The name of the Cloud Storage bucket where processed videos will be stored."
-  type        = string
-}
-
-# Display name for the ingestion workflow.
-variable "workflow_name" {
-  description = "The name of the Workflow to be triggered by Eventarc."
-  type        = string
-}
-
-# Display name for the completion workflow.
-variable "completion_workflow_name" {
-  description = "The name of the Workflow to be triggered by Eventarc."
-  type        = string
-}
-
-# Firestore database used to persist video metadata.
-variable "firestore_db_name" {
-  description = "The name of the Firestore database to be used for storing video metadata."
-  type        = string
-}
-
 variable "execution_history_level" {
   description = "The level of execution history to retain for the workflow."
   type        = string
   default     = "EXECUTION_HISTORY_DETAILED"
+}
+
+variable "workflows" {
+  description = "A map of workflows to deploy. Key is the identifier, value contains name, source content, and env vars."
+  type = map(object({
+    name            = string
+    description     = optional(string)
+    source_contents = string
+    env_vars        = map(string)
+  }))
 }

@@ -3,6 +3,37 @@
 # This file wires together shared modules to assemble the full deployment.
 # -----------------------------------------------------------------------------
 
+# -----------------------------------------------------------------------------
+# Locals: Workflow Configuration
+# Centralizes the construction of workflow definitions and environment variables.
+# This separates configuration logic from the module instantiation below.
+# -----------------------------------------------------------------------------
+locals {
+  workflows_config = {
+    ingestion = {
+      name            = var.workflow_name
+      description     = "Primary workflow that handles ingestion, logging, and job kick-off."
+      source_contents = file("${path.module}/../../../workflows/ingestion-main.yaml")
+      env_vars = {
+        PROJECT_ID             = var.project_id
+        PROJECT_REGION         = var.project_region
+        TRANSCODER_TEMPLATE_ID = var.transcoder_template_id
+        PROCESSED_BUCKET       = module.storage.processed_videos_bucket_name
+        FIRESTORE_DB           = var.firestore_db_name
+        SERVICE_ACCOUNT_EMAIL  = module.iam.service_account_name
+      }
+    }
+    completion = {
+      name            = var.completion_workflow_name
+      description     = "Secondary workflow that handles Transcoder completion callbacks."
+      source_contents = file("${path.module}/../../../workflows/completion-main.yaml")
+      env_vars = {
+        FIRESTORE_DB = var.firestore_db_name
+      }
+    }
+  }
+}
+
 # Resolve the service account that Eventarc and Workflows run as.
 module "iam" {
   source               = "../../modules/iam"
@@ -32,16 +63,11 @@ module "eventarc_trigger" {
 
 # Cloud Workflows definitions that orchestrate ingest and completion handling.
 module "workflows" {
-  source                   = "../../modules/workflows"
-  project_id               = var.project_id
-  project_region           = var.project_region
-  workflow_name            = var.workflow_name
-  completion_workflow_name = var.completion_workflow_name
-  service_account_name     = module.iam.service_account_name
-  transcoder_template_id   = var.transcoder_template_id
-  processed_bucket_name    = module.storage.processed_videos_bucket_name
-  firestore_db_name        = var.firestore_db_name
-
+  source               = "../../modules/workflows"
+  project_id           = var.project_id
+  project_region       = var.project_region
+  service_account_name = module.iam.service_account_name
+  workflows            = local.workflows_config
 }
 
 module "tasks" {
