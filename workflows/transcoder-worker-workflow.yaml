@@ -7,25 +7,39 @@
 main:
   params: [payload]
   steps:
+    # Normalize payload to an object (Cloud Tasks may pass JSON as a string).
+    - normalize_payload:
+        try:
+          steps:
+            - decode_payload:
+                assign:
+                  - normalized_payload: ${json.decode(payload)}
+        except:
+          as: e
+          steps:
+            - passthrough_payload:
+                assign:
+                  - normalized_payload: ${payload}
+
     # Validate required inputs to avoid partial execution.
     - validate_payload:
         switch:
-          - condition: ${payload == null}
+          - condition: ${normalized_payload == null}
             next: invalid_payload
-          - condition: ${payload.video_id == null or payload.input_uri == null or payload.output_uri == null or payload.template_id == null or payload.doc_name == null}
+          - condition: ${normalized_payload.video_id == null or normalized_payload.input_uri == null or normalized_payload.output_uri == null or normalized_payload.template_id == null or normalized_payload.doc_name == null}
             next: invalid_payload
 
     - init:
         assign:
           - project_id: ${sys.get_env("GOOGLE_CLOUD_PROJECT_ID")}
           - project_region: ${sys.get_env("GOOGLE_CLOUD_LOCATION")}
-          - transcoder_template_id: ${payload.template_id}
-          - video_id: ${payload.video_id}
-          - label_video_id: ${text.to_lower(payload.video_id)}
-          - input_uri: ${payload.input_uri}
-          - output_uri: ${payload.output_uri}
-          - ai_output_uri: ${payload.output_uri_ai}
-          - doc_name: ${payload.doc_name}
+          - transcoder_template_id: ${normalized_payload.template_id}
+          - video_id: ${normalized_payload.video_id}
+          - label_video_id: ${text.to_lower(normalized_payload.video_id)}
+          - input_uri: ${normalized_payload.input_uri}
+          - output_uri: ${normalized_payload.output_uri}
+          - ai_output_uri: ${normalized_payload.output_uri_ai}
+          - doc_name: ${normalized_payload.doc_name}
           - current_time: ${time.format(sys.now())}
 
     # Start transcoding and AI analysis in parallel.
