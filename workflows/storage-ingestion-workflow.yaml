@@ -67,10 +67,13 @@ main:
     # Use create to enforce uniqueness and avoid race conditions.
     - create_firestore_doc:
         try:
-          call: googleapis.firestore.v1.projects.databases.documents.create
+          call: googleapis.firestore.v1.projects.databases.documents.createDocument
           args:
-            parent: ${"projects/" + project_id + "/databases/" + firestore_db + "/documents/videos"}
+            parent: ${"projects/" + project_id + "/databases/" + firestore_db + "/documents"}
+            collectionId: "videos"
             documentId: ${video_id}
+            mask:
+              fieldPaths: ["video_id", "original_filename", "status", "created_at"]
             body:
               fields:
                 video_id:
