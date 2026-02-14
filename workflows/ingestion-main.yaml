@@ -87,7 +87,7 @@ main:
     - prepare_payload:
         assign:
           - worker_workflow_id: "video-processing-worker"
-          - queue_id: "video-transcode-queue"
+          - queue_id: "apex-transcoder-tasks-queue"
           - worker_args:
               video_id: ${video_id}
               input_uri: ${input_uri}
