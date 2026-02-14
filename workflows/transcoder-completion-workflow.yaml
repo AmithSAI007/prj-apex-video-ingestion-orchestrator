@@ -32,40 +32,14 @@ main:
             # Normalize metadata for use in logging and Firestore updates.
             - extract_metadata:
                 assign:
-                  - video_id: ${full_job.labels.video_id}
+                  - output_uri: ${default(full_job.outputUri, full_job.config.output.uri)}
+                  - output_uri_parts: ${text.split(output_uri, "/")}
+                  - video_id: ${output_uri_parts[len(output_uri_parts) - 2]}
                   - video_stream: ${full_job.config.elementaryStreams[0].videoStream}
                   - codec_settings: ${video_stream.h264}
                   - width: ${int(default(codec_settings.widthPixels, 0))}
                   - height: ${int(default(codec_settings.heightPixels, 0))}
-
-            # Resolve the Firestore document by transcoding_job_id.
-            - lookup_firestore_doc:
-                call: googleapis.firestore.v1.projects.databases.documents.runQuery
-                args:
-                  parent: ${"projects/" + project_id + "/databases/" + firestore_db + "/documents"}
-                  body:
-                    structuredQuery:
-                      from:
-                        - collectionId: "videos"
-                      where:
-                        fieldFilter:
-                          field:
-                            fieldPath: "transcoding_job_id"
-                          op: "EQUAL"
-                          value:
-                            stringValue: ${job_name}
-                      limit: 1
-                result: query_results
-
-            - select_firestore_doc:
-                switch:
-                  - condition: ${len(query_results) > 0 and "document" in query_results[0]}
-                    next: assign_doc_name
-                next: handle_missing_doc
-
-            - assign_doc_name:
-                assign:
-                  - doc_name: ${query_results[0].document.name}
+                  - doc_name: ${"projects/" + project_id + "/databases/" + firestore_db + "/documents/videos/" + video_id}
 
             # Emit a log record with job resolution details.
             - log_completion:
@@ -134,16 +108,6 @@ main:
                     state: ${state}
                 next: return_unknown
 
-            # Handle missing Firestore documents for the given job.
-            - handle_missing_doc:
-                call: sys.log
-                args:
-                  severity: "WARNING"
-                  json:
-                    message: "No Firestore document found for transcoding job"
-                    job_name: ${job_name}
-                    video_id: ${video_id}
-                next: return_unknown
 
         except:
           as: e
