@@ -30,7 +30,7 @@ main:
           steps:
             - decode_argument:
                 assign:
-                  - normalized_payload: ${json.decode(payload.argument)}
+                  - normalized_payload: ${json.decode(normalized_payload.argument)}
         except:
           as: e
           steps:
@@ -38,140 +38,22 @@ main:
                 assign:
                   - normalized_payload: ${normalized_payload}
 
-    # Validate required inputs to avoid partial execution.
-    - validate_payload:
+    - unwrap_argument_object:
         switch:
-          - condition: ${normalized_payload == null}
-            next: invalid_payload
-          - condition: ${normalized_payload.video_id == null or normalized_payload.input_uri == null or normalized_payload.output_uri == null or normalized_payload.template_id == null or normalized_payload.doc_name == null}
-            next: invalid_payload
+          - condition: ${normalized_payload.argument != null}
+            next: use_argument_object
 
-    - init:
+    - use_argument_object:
         assign:
-          - project_id: ${sys.get_env("GOOGLE_CLOUD_PROJECT_ID")}
-          - project_region: ${sys.get_env("GOOGLE_CLOUD_LOCATION")}
-          - transcoder_template_id: ${normalized_payload.template_id}
-          - video_id: ${normalized_payload.video_id}
-          - label_video_id: ${text.to_lower(normalized_payload.video_id)}
-          - input_uri: ${normalized_payload.input_uri}
-          - output_uri: ${normalized_payload.output_uri}
-          - ai_output_uri: ${normalized_payload.output_uri_ai}
-          - doc_name: ${normalized_payload.doc_name}
-          - current_time: ${time.format(sys.now())}
+          - normalized_payload: ${normalized_payload.argument}
 
-    # Start transcoding and AI analysis in parallel.
-    - process_media_safe:
-        try:
-          parallel:
-            branches:
-              - transcode_batch:
-                  steps:
-                    - start_transcoding:
-                        call: googleapis.transcoder.v1.projects.locations.jobs.create
-                        args:
-                          parent: ${"projects/" + project_id + "/locations/" + project_region}
-                          body:
-                            inputUri: ${input_uri}
-                            outputUri: ${output_uri}
-                            templateId: ${transcoder_template_id}
-                            labels:
-                              video_id: ${label_video_id}
-                        result: transcoding_result
-
-                    - log_transcoding_success:
-                        call: sys.log
-                        args:
-                          severity: "INFO"
-                          json:
-                            message: "Transcoding job started successfully"
-                            transcoding_job: ${transcoding_result.name}
-                            video_id: ${video_id}
-
-                    - update_status_processing:
-                        call: googleapis.firestore.v1.projects.databases.documents.patch
-                        args:
-                          name: ${doc_name}
-                          updateMask:
-                            fieldPaths:
-                              ["transcoding_job_id", "status", "updated_at"]
-                          body:
-                            fields:
-                              transcoding_job_id:
-                                stringValue: ${transcoding_result.name}
-                              status:
-                                stringValue: "PROCESSING"
-                              updated_at:
-                                timestampValue: ${current_time}
-              - ai_analysis_batch:
-                  steps:
-                    - start_ai_analysis:
-                        try:
-                          call: http.post
-                          args:
-                            url: "https://videointelligence.googleapis.com/v1/videos:annotate"
-                            auth:
-                              type: OAuth2
-                            body:
-                              inputUri: ${input_uri}
-                              features:
-                                [
-                                  "LABEL_DETECTION",
-                                  "SHOT_CHANGE_DETECTION",
-                                  "EXPLICIT_CONTENT_DETECTION",
-                                ]
-                              outputUri: ${ai_output_uri}
-                          result: ai_result
-                        except:
-                          as: ai_error
-                          steps:
-                            - log_ai_failure:
-                                call: sys.log
-                                args:
-                                  severity: "ERROR"
-                                  json:
-                                    message: "AI Analysis failed to start"
-                                    error: ${ai_error}
-                                    video_id: ${video_id}
-                    - log_ai_start:
-                        call: sys.log
-                        args:
-                          severity: "INFO"
-                          json:
-                            message: "AI Analysis started"
-                            video_id: ${video_id}
-        except:
-          as: e
-          steps:
-            # Capture and log failures so operators can troubleshoot quickly.
-            - log_error:
-                call: sys.log
-                args:
-                  severity: "ERROR"
-                  json:
-                    message: "Error during media processing"
-                    error: ${e}
-                    video_id: ${video_id}
-
-            - set_failed_status:
-                call: googleapis.firestore.v1.projects.databases.documents.patch
-                args:
-                  name: ${doc_name}
-                  updateMask:
-                    fieldPaths: ["status", "updated_at", "error_message"]
-                  body:
-                    fields:
-                      status:
-                        stringValue: "ERROR"
-                      updated_at:
-                        timestampValue: ${current_time}
-                      error_message:
-                        stringValue: ${default(e.message, "Unknown error")}
-            # Re-raise the error to surface the failure to the caller.
-            - fail_execution:
-                raise: ${e}
-
-    - invalid_payload:
-        raise: "Invalid payload: required fields missing"
+    - log_normalized_payload:
+        call: sys.log
+        args:
+          severity: "INFO"
+          json:
+            message: "Normalized payload"
+            payload: ${normalized_payload}
 
     - return_result:
         return:
