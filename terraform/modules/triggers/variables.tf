@@ -41,7 +41,7 @@ variable "service_account_name" {
 variable "workflow_name" {
   description = "The name of the Workflow to be triggered by Eventarc."
   type        = string
-  default     = "prj-apex-video-orchestrator-workflow"
+  default     = "prj-apex-storage-ingestion-workflow"
 }
 
 # Name for the trigger that listens for Transcoder completion Pub/Sub events.
@@ -55,7 +55,7 @@ variable "completion_trigger_name" {
 variable "completion_workflow_name" {
   description = "The name of the Workflow to be triggered by Eventarc."
   type        = string
-  default     = "prj-apex-video-transcode-completion-workflow"
+  default     = "prj-apex-transcoder-completion-workflow"
 }
 
 # Pub/Sub topic ID used by Transcoder to emit completion messages.
