@@ -40,7 +40,7 @@ main:
 
     - unwrap_argument_object:
         switch:
-          - condition: ${normalized_payload.argument != null}
+          - condition: ${"argument" in normalized_payload and normalized_payload.argument != null}
             next: use_argument_object
 
     - use_argument_object:
