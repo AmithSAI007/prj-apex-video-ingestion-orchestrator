@@ -7,26 +7,9 @@
 main:
   params: [payload]
   steps:
-    # Normalize payload to an object (Cloud Tasks may pass JSON as a string).
-    - normalize_payload:
-        assign:
-          - normalized_payload: ${payload}
-
-    - decode_payload_string:
-        try:
-          steps:
-            - decode_payload:
-                assign:
-                  - normalized_payload: ${json.decode(payload)}
-        except:
-          as: e
-          steps:
-            - ignore_decode_error:
-                assign:
-                  - normalized_payload: ${normalized_payload}
-
     - init:
         assign:
+          - normalized_payload: ${payload}
           - project_id: ${sys.get_env("GOOGLE_CLOUD_PROJECT_ID")}
           - project_region: ${sys.get_env("GOOGLE_CLOUD_LOCATION")}
           - transcoder_template_id: ${normalized_payload.template_id}
@@ -37,6 +20,38 @@ main:
           - ai_output_uri: ${normalized_payload.output_uri_ai}
           - doc_name: ${normalized_payload.doc_name}
           - current_time: ${time.format(sys.now())}
+
+    # Guard against retries or duplicate tasks overwriting terminal statuses.
+    - check_existing_status:
+        try:
+          call: googleapis.firestore.v1.projects.databases.documents.get
+          args:
+            name: ${doc_name}
+          result: existing_doc
+        except:
+          as: e
+          steps:
+            - ignore_missing_doc:
+                switch:
+                  - condition: ${e.code == 404}
+                    next: process_media_safe
+            - reraise_get_error:
+                raise: ${e}
+
+    - skip_if_terminal:
+        switch:
+          - condition: ${"fields" in existing_doc and "status" in existing_doc.fields and (existing_doc.fields.status.stringValue == "COMPLETED" or existing_doc.fields.status.stringValue == "FAILED" or existing_doc.fields.status.stringValue == "ERROR")}
+            next: log_terminal_skip
+
+    - log_terminal_skip:
+        call: sys.log
+        args:
+          severity: "INFO"
+          json:
+            message: "Skipping worker execution due to terminal status"
+            video_id: ${video_id}
+            status: ${existing_doc.fields.status.stringValue}
+        next: return_result
 
     # Start transcoding and AI analysis in parallel.
     - process_media_safe:

@@ -64,24 +64,32 @@ main:
             event_type: ${event_type}
 
     # Create the initial Firestore document to track workflow state.
-    # Use patch with updateMask to keep writes bounded and idempotent.
+    # Use create to enforce uniqueness and avoid race conditions.
     - create_firestore_doc:
-        call: googleapis.firestore.v1.projects.databases.documents.patch
-        args:
-          name: ${doc_name}
-          updateMask:
-            fieldPaths:
-              ["video_id", "original_filename", "status", "created_at"]
-          body:
-            fields:
-              video_id:
-                stringValue: ${video_id}
-              original_filename:
-                stringValue: ${object}
-              status:
-                stringValue: "PENDING"
-              created_at:
-                timestampValue: ${current_time}
+        try:
+          call: googleapis.firestore.v1.projects.databases.documents.create
+          args:
+            parent: ${"projects/" + project_id + "/databases/" + firestore_db + "/documents/videos"}
+            documentId: ${video_id}
+            body:
+              fields:
+                video_id:
+                  stringValue: ${video_id}
+                original_filename:
+                  stringValue: ${object}
+                status:
+                  stringValue: "PENDING"
+                created_at:
+                  timestampValue: ${current_time}
+        except:
+          as: e
+          steps:
+            - handle_duplicate_create:
+                switch:
+                  - condition: ${e.code == 409}
+                    next: return_duplicate
+            - reraise_create_error:
+                raise: ${e}
 
     # Prepare the worker execution payload for Cloud Tasks.
     # Encode JSON as base64 to satisfy Cloud Tasks HTTP body requirements.
