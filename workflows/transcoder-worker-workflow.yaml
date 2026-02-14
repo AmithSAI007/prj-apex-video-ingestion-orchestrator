@@ -43,16 +43,6 @@ main:
           - condition: ${"fields" in existing_doc and "status" in existing_doc.fields and (existing_doc.fields.status.stringValue == "COMPLETED" or existing_doc.fields.status.stringValue == "FAILED" or existing_doc.fields.status.stringValue == "ERROR")}
             next: log_terminal_skip
 
-    - log_terminal_skip:
-        call: sys.log
-        args:
-          severity: "INFO"
-          json:
-            message: "Skipping worker execution due to terminal status"
-            video_id: ${video_id}
-            status: ${existing_doc.fields.status.stringValue}
-        next: return_result
-
     # Start transcoding and AI analysis in parallel.
     - process_media_safe:
         try:
@@ -168,3 +158,13 @@ main:
         return:
           message: "Event processed successfully"
           status: "success"
+
+    - log_terminal_skip:
+        call: sys.log
+        args:
+          severity: "INFO"
+          json:
+            message: "Skipping worker execution due to terminal status"
+            video_id: ${video_id}
+            status: ${existing_doc.fields.status.stringValue}
+        next: return_result
