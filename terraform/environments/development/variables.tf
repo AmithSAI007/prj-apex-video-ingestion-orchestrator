@@ -34,19 +34,19 @@ variable "transcoder_template_id" {
 variable "workflow_name" {
   description = "The name of the Workflow to be triggered by Eventarc."
   type        = string
-  default     = "prj-apex-video-orchestrator-workflow"
+  default     = "prj-apex-storage-ingestion-workflow"
 }
 
 variable "completion_workflow_name" {
   description = "The name of the Workflow to be triggered by Eventarc."
   type        = string
-  default     = "prj-apex-video-transcode-completion-workflow"
+  default     = "prj-apex-transcoder-completion-workflow"
 }
 
 variable "worker_workflow_name" {
   description = "The name of the Workflow to be triggered by Cloud Tasks for worker processing."
   type        = string
-  default     = "prj-apex-video-processing-worker"
+  default     = "prj-apex-transcoder-worker-workflow"
 }
 
 variable "firestore_db_name" {

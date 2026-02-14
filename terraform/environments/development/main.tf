@@ -13,7 +13,7 @@ locals {
     ingestion = {
       name            = var.workflow_name
       description     = "Primary workflow that handles ingestion, logging, and job kick-off."
-      source_contents = file("${path.module}/../../../workflows/ingestion-main.yaml")
+      source_contents = file("${path.module}/../../../workflows/storage-ingestion-workflow.yaml")
       env_vars = {
         PROJECT_ID             = var.project_id
         PROJECT_REGION         = var.project_region
@@ -26,7 +26,7 @@ locals {
     completion = {
       name            = var.completion_workflow_name
       description     = "Secondary workflow that handles Transcoder completion callbacks."
-      source_contents = file("${path.module}/../../../workflows/completion-main.yaml")
+      source_contents = file("${path.module}/../../../workflows/transcoder-completion-workflow.yaml")
       env_vars = {
         FIRESTORE_DB = var.firestore_db_name
       }
@@ -34,8 +34,10 @@ locals {
     worker = {
       name            = var.worker_workflow_name
       description     = "Worker workflow triggered by Cloud Tasks to echo input payloads."
-      source_contents = file("${path.module}/../../../workflows/video-processing-worker.yaml")
-      env_vars        = {}
+      source_contents = file("${path.module}/../../../workflows/transcoder-worker-workflow.yaml")
+      env_vars = {
+        FIRESTORE_DB = var.firestore_db_name
+      }
     }
   }
 }

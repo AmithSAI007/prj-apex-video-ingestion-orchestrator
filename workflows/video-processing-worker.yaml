@@ -1,6 +1,0 @@
-# Workflow triggered by Cloud Tasks to process a video payload.
-main:
-  params: [payload]
-  steps:
-    - return_payload:
-        return: ${payload}
