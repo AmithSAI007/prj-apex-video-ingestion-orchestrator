@@ -133,7 +133,7 @@ main:
                       updated_at:
                         timestampValue: ${current_time}
                       error_message:
-                        stringValue: ${json.encode(e)}
+                        stringValue: ${default(e.message, "Unknown error")}
             # Re-raise the error to surface the failure to the caller.
             - fail_execution:
                 raise: ${e}
