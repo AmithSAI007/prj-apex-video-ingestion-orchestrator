@@ -3,6 +3,7 @@
 # - Validate required inputs before calling external APIs.
 # - Use structured logs for operational visibility.
 # - Persist status updates to Firestore for traceability.
+# - Treat Cloud Tasks retries as at-least-once delivery.
 main:
   params: [payload]
   steps:

@@ -25,6 +25,7 @@ and downstream metadata updates.
 - `terraform/modules/workflows`: Cloud Workflows definitions and environment variables.
 - `workflows/storage-ingestion-workflow.yaml`: Ingestion workflow definition.
 - `workflows/transcoder-completion-workflow.yaml`: Completion workflow definition.
+- `workflows/transcoder-worker-workflow.yaml`: Worker workflow triggered by Cloud Tasks.
 
 ## Prerequisites
 
@@ -89,6 +90,8 @@ terraform apply -var-file=terraform.tfvars
   Transcoder job, logs progress, and updates Firestore for processing status.
 - **Completion workflow (`workflows/transcoder-completion-workflow.yaml`)**: Reads Pub/Sub completion messages,
   fetches job details, and updates Firestore with final status and resolution.
+- **Worker workflow (`workflows/transcoder-worker-workflow.yaml`)**: Starts Transcoder jobs and triggers
+  Video Intelligence annotations, then updates Firestore with processing state.
 
 ## Observability
 
