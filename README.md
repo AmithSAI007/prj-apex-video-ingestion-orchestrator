@@ -23,8 +23,8 @@ and downstream metadata updates.
 - `terraform/modules/pubsub`: Existing Pub/Sub topic used for completion events.
 - `terraform/modules/triggers`: Eventarc triggers for ingestion and completion workflows.
 - `terraform/modules/workflows`: Cloud Workflows definitions and environment variables.
-- `workflows/ingestion-main.yaml`: Ingestion workflow definition.
-- `workflows/completion-main.yaml`: Completion workflow definition.
+- `workflows/storage-ingestion-workflow.yaml`: Ingestion workflow definition.
+- `workflows/transcoder-completion-workflow.yaml`: Completion workflow definition.
 
 ## Prerequisites
 
@@ -53,6 +53,7 @@ Provide environment-specific values in `terraform/environments/development/terra
 | `transcoder_template_id`       | Transcoder template for video processing jobs.  |
 | `workflow_name`                | Name for the ingestion workflow.                |
 | `completion_workflow_name`     | Name for the completion workflow.               |
+| `worker_workflow_name`         | Name for the worker workflow.                   |
 | `firestore_db_name`            | Firestore database used for video metadata.     |
 | `completion_pubsub_topic_name` | Pub/Sub topic for Transcoder completion events. |
 
@@ -63,8 +64,9 @@ project_id                   = "my-gcp-project"
 project_region               = "us-central1"
 service_account_name         = "apex-video-orchestrator-svc"
 transcoder_template_id       = "projects/my-gcp-project/locations/us-central1/templates/my-template"
-workflow_name                = "apex-video-ingestion-workflow"
-completion_workflow_name     = "apex-video-completion-workflow"
+workflow_name                = "apex-storage-ingestion-workflow"
+completion_workflow_name     = "apex-transcoder-completion-workflow"
+worker_workflow_name         = "apex-transcoder-worker-workflow"
 firestore_db_name            = "(default)"
 completion_pubsub_topic_name = "apex-transcoder-status-topic"
 ```
@@ -83,9 +85,9 @@ terraform apply -var-file=terraform.tfvars
 
 ## Workflows Summary
 
-- **Ingestion workflow (`workflows/ingestion-main.yaml`)**: Initializes metadata, starts a
+- **Ingestion workflow (`workflows/storage-ingestion-workflow.yaml`)**: Initializes metadata, starts a
   Transcoder job, logs progress, and updates Firestore for processing status.
-- **Completion workflow (`workflows/completion-main.yaml`)**: Reads Pub/Sub completion messages,
+- **Completion workflow (`workflows/transcoder-completion-workflow.yaml`)**: Reads Pub/Sub completion messages,
   fetches job details, and updates Firestore with final status and resolution.
 
 ## Observability

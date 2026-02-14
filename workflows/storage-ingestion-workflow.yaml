@@ -45,10 +45,10 @@ main:
             - reraise_error:
                 raise: ${e} # Real error, propagate
 
-    # Guard against duplicate processing; consider both in-flight and completed states.
+    # Guard against duplicate processing; consider queued, in-flight, and completed states.
     - analyze_existing:
         switch:
-          - condition: ${"fields" in existing_doc and "status" in existing_doc.fields and (existing_doc.fields.status.stringValue == "PROCESSING" or existing_doc.fields.status.stringValue == "COMPLETED")}
+          - condition: ${"fields" in existing_doc and "status" in existing_doc.fields and (existing_doc.fields.status.stringValue == "PENDING" or existing_doc.fields.status.stringValue == "PROCESSING" or existing_doc.fields.status.stringValue == "COMPLETED")}
             next: return_duplicate
 
     # Emit a structured log entry for observability and traceability.
@@ -86,7 +86,7 @@ main:
     # Encode JSON as base64 to satisfy Cloud Tasks HTTP body requirements.
     - prepare_payload:
         assign:
-          - worker_workflow_id: "prj-apex-video-processing-worker"
+          - worker_workflow_id: "prj-apex-transcoder-worker-workflow"
           - queue_id: "apex-transcoder-tasks-queue"
           - worker_args:
               video_id: ${video_id}
@@ -94,6 +94,7 @@ main:
               output_uri: ${output_uri}
               output_uri_ai: ${output_uri_ai}
               template_id: ${template_id}
+              doc_name: ${doc_name}
           - worker_args_str: ${text.decode(json.encode(worker_args))}
           - api_body:
               argument: ${worker_args_str}
