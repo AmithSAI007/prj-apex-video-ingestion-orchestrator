@@ -21,6 +21,7 @@ main:
           - project_region: ${sys.get_env("GOOGLE_CLOUD_LOCATION")}
           - transcoder_template_id: ${payload.template_id}
           - video_id: ${payload.video_id}
+          - label_video_id: ${text.to_lower(payload.video_id)}
           - input_uri: ${payload.input_uri}
           - output_uri: ${payload.output_uri}
           - ai_output_uri: ${payload.output_uri_ai}
@@ -43,7 +44,7 @@ main:
                             outputUri: ${output_uri}
                             templateId: ${transcoder_template_id}
                             labels:
-                              video_id: ${video_id}
+                              video_id: ${label_video_id}
                         result: transcoding_result
 
                     - log_transcoding_success:
