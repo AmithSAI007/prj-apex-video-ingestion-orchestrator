@@ -1,4 +1,8 @@
 # Workflow triggered by Pub/Sub completion notifications from Transcoder.
+# Enterprise standards notes:
+# - Use structured logging for observability and auditability.
+# - Handle external API calls with explicit error paths.
+# - Persist terminal status updates to Firestore for traceability.
 main:
   params: [event]
   steps:

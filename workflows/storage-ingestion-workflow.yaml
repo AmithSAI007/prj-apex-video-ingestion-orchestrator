@@ -4,6 +4,7 @@
 # - Use structured logging (json payloads) for observability and auditability.
 # - Ensure Firestore writes are idempotent and recoverable from retries.
 # - Favor explicit error handling for external API calls.
+# - Maintain stable workflow identifiers across deployments.
 main:
   params: [event]
   steps:
