@@ -38,14 +38,7 @@ main:
                 assign:
                   - normalized_payload: ${normalized_payload}
 
-    - unwrap_argument_object:
-        switch:
-          - condition: ${"argument" in normalized_payload and normalized_payload.argument != null}
-            next: use_argument_object
-
-    - use_argument_object:
-        assign:
-          - normalized_payload: ${normalized_payload.argument}
+    # Argument object unwrap is temporarily disabled for debugging.
 
     - log_normalized_payload:
         call: sys.log
