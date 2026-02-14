@@ -1,8 +1,14 @@
 # Workflow triggered by Cloud Storage finalize events to start the pipeline.
+# Enterprise standards notes:
+# - Keep all environment-dependent values in sys.get_env to avoid hardcoding.
+# - Use structured logging (json payloads) for observability and auditability.
+# - Ensure Firestore writes are idempotent and recoverable from retries.
+# - Favor explicit error handling for external API calls.
 main:
   params: [event]
   steps:
     # Collect input metadata and environment configuration.
+    # Normalize identifiers derived from hashes to be URL- and document-safe.
     - init:
         assign:
           - project_id: ${sys.get_env("GOOGLE_CLOUD_PROJECT_ID")}
@@ -22,7 +28,7 @@ main:
 
     # Deduplication: Check if this video has already been processed or is processing.
     # We use the calculated video_id (file hash) to look up the Firestore document.
-    # If the document doesn't exist (404), 'except' block handles it and we proceed.
+    # If the document doesn't exist (404), the exception path allows normal processing.
     - check_duplicate:
         try:
           call: googleapis.firestore.v1.projects.databases.documents.get
@@ -39,12 +45,13 @@ main:
             - reraise_error:
                 raise: ${e} # Real error, propagate
 
+    # Guard against duplicate processing; consider both in-flight and completed states.
     - analyze_existing:
         switch:
           - condition: ${"fields" in existing_doc and "status" in existing_doc.fields and (existing_doc.fields.status.stringValue == "PROCESSING" or existing_doc.fields.status.stringValue == "COMPLETED")}
             next: return_duplicate
 
-    # Emit a structured log entry for observability.
+    # Emit a structured log entry for observability and traceability.
     - log_start:
         call: sys.log
         args:
@@ -53,8 +60,10 @@ main:
             message: "Ingestion started"
             video_id: ${video_id}
             file: ${object}
+            event_type: ${event_type}
 
-    # Create the initial Firestore document to track workflow state
+    # Create the initial Firestore document to track workflow state.
+    # Use patch with updateMask to keep writes bounded and idempotent.
     - create_firestore_doc:
         call: googleapis.firestore.v1.projects.databases.documents.patch
         args:
@@ -73,6 +82,8 @@ main:
               created_at:
                 timestampValue: ${current_time}
 
+    # Prepare the worker execution payload for Cloud Tasks.
+    # Encode JSON as base64 to satisfy Cloud Tasks HTTP body requirements.
     - prepare_payload:
         assign:
           - worker_workflow_id: "video-processing-worker"
@@ -91,20 +102,22 @@ main:
           - worker_url: ${"https://workflowexecutions.googleapis.com/v1/projects/" + project_id + "/locations/" + project_region + "/workflows/" + worker_workflow_id + "/executions"}
           - queue_path: ${"projects/" + project_id + "/locations/" + project_region + "/queues/" + queue_id}
 
-    # - create_task:
-    #     call: googleapis.cloudtasks.v2.projects.locations.queues.tasks.create
-    #     args:
-    #       parent: ${queue_path}
-    #       body:
-    #         task:
-    #           httpRequest:
-    #             httpMethod: "POST"
-    #             url: ${worker_url}
-    #             headers:
-    #               Content-Type: "application/json"
-    #             body: ${task_body_base64}
-    #             oauthToken:
-    #               serviceAccountEmail: ${sys.get_env("SERVICE_ACCOUNT_EMAIL")}
+    # Enqueue a task to trigger the worker workflow with service account auth.
+    # Cloud Tasks provides retry semantics; ensure the downstream worker is idempotent.
+    - create_task:
+        call: googleapis.cloudtasks.v2.projects.locations.queues.tasks.create
+        args:
+          parent: ${queue_path}
+          body:
+            task:
+              httpRequest:
+                httpMethod: "POST"
+                url: ${worker_url}
+                headers:
+                  Content-Type: "application/json"
+                body: ${task_body_base64}
+                oauthToken:
+                  serviceAccountEmail: ${sys.get_env("SERVICE_ACCOUNT_EMAIL")}
 
     # Return a succinct success payload to Eventarc.
     - return_result:
@@ -112,6 +125,7 @@ main:
           message: "Event processed successfully"
           status: "success"
 
+    # Return a consistent skip response for duplicate events.
     - return_duplicate:
         return:
           message: "Video already processed or in progress. Skipping."
