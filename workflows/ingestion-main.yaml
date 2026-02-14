@@ -86,7 +86,7 @@ main:
     # Encode JSON as base64 to satisfy Cloud Tasks HTTP body requirements.
     - prepare_payload:
         assign:
-          - worker_workflow_id: "video-processing-worker"
+          - worker_workflow_id: "prj-apex-video-processing-worker"
           - queue_id: "apex-transcoder-tasks-queue"
           - worker_args:
               video_id: ${video_id}
