@@ -9,6 +9,10 @@ main:
   steps:
     # Normalize payload to an object (Cloud Tasks may pass JSON as a string).
     - normalize_payload:
+        assign:
+          - normalized_payload: ${payload}
+
+    - decode_payload_string:
         try:
           steps:
             - decode_payload:
@@ -17,9 +21,22 @@ main:
         except:
           as: e
           steps:
-            - passthrough_payload:
+            - ignore_decode_error:
                 assign:
-                  - normalized_payload: ${payload}
+                  - normalized_payload: ${normalized_payload}
+
+    - decode_payload_argument:
+        try:
+          steps:
+            - decode_argument:
+                assign:
+                  - normalized_payload: ${json.decode(payload.argument)}
+        except:
+          as: e
+          steps:
+            - ignore_argument_error:
+                assign:
+                  - normalized_payload: ${normalized_payload}
 
     # Validate required inputs to avoid partial execution.
     - validate_payload:
