@@ -81,6 +81,9 @@ This project uses Terraform for Infrastructure as Code. There is no top-level `p
 *   **Variables:**
     *   Use `sys.get_env("VAR_NAME")` to access environment variables.
     *   Define local variables in an `init` step using `assign`.
+*   **Idempotency:**
+    *   Avoid overwriting terminal Firestore statuses (`COMPLETED`, `FAILED`, `ERROR`).
+    *   When Cloud Tasks retries are possible, re-check status before writing non-terminal updates.
 *   **Error Handling:**
     *   Use `try/except` blocks for external API calls (e.g., `googleapis.transcoder...`, `http.post`).
     *   Log errors using `sys.log` with `severity: "ERROR"` before raising or failing.

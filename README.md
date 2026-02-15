@@ -10,8 +10,8 @@ and downstream metadata updates.
 ## Architecture Flow
 
 1. **Raw upload**: A video is uploaded to the raw Cloud Storage bucket.
-2. **Ingestion workflow**: Eventarc invokes the ingestion workflow on object finalization.
-3. **Transcoding**: The workflow creates a Transcoder job and writes initial metadata to Firestore.
+2. **Ingestion workflow**: Eventarc invokes the ingestion workflow on object finalization and creates the Firestore record idempotently.
+3. **Transcoding**: The worker workflow starts a Transcoder job, records the job ID, and marks processing when appropriate.
 4. **Completion workflow**: Transcoder publishes a Pub/Sub message and Eventarc routes it to the
    completion workflow, which updates Firestore with the job outcome.
 
@@ -86,12 +86,10 @@ terraform apply -var-file=terraform.tfvars
 
 ## Workflows Summary
 
-- **Ingestion workflow (`workflows/storage-ingestion-workflow.yaml`)**: Initializes metadata, starts a
-  Transcoder job, logs progress, and updates Firestore for processing status.
+- **Ingestion workflow (`workflows/storage-ingestion-workflow.yaml`)**: Initializes metadata, creates the Firestore record, and enqueues the worker task.
 - **Completion workflow (`workflows/transcoder-completion-workflow.yaml`)**: Reads Pub/Sub completion messages,
   fetches job details, and updates Firestore with final status and resolution.
-- **Worker workflow (`workflows/transcoder-worker-workflow.yaml`)**: Starts Transcoder jobs and triggers
-  Video Intelligence annotations, then updates Firestore with processing state.
+- **Worker workflow (`workflows/transcoder-worker-workflow.yaml`)**: Starts Transcoder jobs and Video Intelligence annotations, records the job ID, and conditionally updates processing state to avoid overwriting terminal statuses.
 
 ## Observability
 
