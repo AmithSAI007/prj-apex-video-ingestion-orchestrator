@@ -71,6 +71,41 @@ main:
                             transcoding_job: ${transcoding_result.name}
                             video_id: ${video_id}
 
+                    - update_transcoding_job_id:
+                        call: googleapis.firestore.v1.projects.databases.documents.patch
+                        args:
+                          name: ${doc_name}
+                          updateMask:
+                            fieldPaths:
+                              ["transcoding_job_id", "updated_at"]
+                          body:
+                            fields:
+                              transcoding_job_id:
+                                stringValue: ${transcoding_result.name}
+                              updated_at:
+                                timestampValue: ${current_time}
+
+                    - refresh_status_before_processing:
+                        try:
+                          call: googleapis.firestore.v1.projects.databases.documents.get
+                          args:
+                            name: ${doc_name}
+                          result: latest_doc
+                        except:
+                          as: e
+                          steps:
+                            - ignore_missing_doc_refresh:
+                                switch:
+                                  - condition: ${e.code == 404}
+                                    next: update_status_processing
+                            - reraise_refresh_error:
+                                raise: ${e}
+
+                    - skip_processing_if_terminal:
+                        switch:
+                          - condition: ${"fields" in latest_doc and "status" in latest_doc.fields and (latest_doc.fields.status.stringValue == "COMPLETED" or latest_doc.fields.status.stringValue == "FAILED" or latest_doc.fields.status.stringValue == "ERROR")}
+                            next: log_processing_skip
+
                     - update_status_processing:
                         call: googleapis.firestore.v1.projects.databases.documents.patch
                         args:
@@ -86,6 +121,20 @@ main:
                                 stringValue: "PROCESSING"
                               updated_at:
                                 timestampValue: ${current_time}
+                        next: continue_after_processing
+
+                    - log_processing_skip:
+                        call: sys.log
+                        args:
+                          severity: "INFO"
+                          json:
+                            message: "Skipping PROCESSING status update due to terminal status"
+                            video_id: ${video_id}
+                            status: ${latest_doc.fields.status.stringValue}
+
+                    - continue_after_processing:
+                        assign:
+                          - processing_status_updated: true
               - ai_analysis_batch:
                   steps:
                     - start_ai_analysis:
