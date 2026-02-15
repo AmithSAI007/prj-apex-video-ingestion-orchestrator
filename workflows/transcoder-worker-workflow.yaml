@@ -112,16 +112,13 @@ main:
                           name: ${doc_name}
                           updateMask:
                             fieldPaths:
-                              ["transcoding_job_id", "status", "updated_at"]
+                              ["status", "updated_at"]
                           body:
                             fields:
-                              transcoding_job_id:
-                                stringValue: ${transcoding_result.name}
                               status:
                                 stringValue: "PROCESSING"
                               updated_at:
                                 timestampValue: ${current_time}
-                        next: continue_after_processing
 
                     - log_processing_skip:
                         call: sys.log
@@ -131,10 +128,6 @@ main:
                             message: "Skipping PROCESSING status update due to terminal status"
                             video_id: ${video_id}
                             status: ${latest_doc.fields.status.stringValue}
-
-                    - continue_after_processing:
-                        assign:
-                          - processing_status_updated: true
               - ai_analysis_batch:
                   steps:
                     - start_ai_analysis:
@@ -154,6 +147,14 @@ main:
                                 ]
                               outputUri: ${ai_output_uri}
                           result: ai_result
+                          steps:
+                            - log_ai_start:
+                                call: sys.log
+                                args:
+                                  severity: "INFO"
+                                  json:
+                                    message: "AI Analysis started"
+                                    video_id: ${video_id}
                         except:
                           as: ai_error
                           steps:
@@ -165,13 +166,6 @@ main:
                                     message: "AI Analysis failed to start"
                                     error: ${ai_error}
                                     video_id: ${video_id}
-                    - log_ai_start:
-                        call: sys.log
-                        args:
-                          severity: "INFO"
-                          json:
-                            message: "AI Analysis started"
-                            video_id: ${video_id}
         except:
           as: e
           steps:

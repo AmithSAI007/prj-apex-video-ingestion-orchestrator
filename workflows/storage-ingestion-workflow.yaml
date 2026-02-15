@@ -27,31 +27,6 @@ main:
           - doc_name: ${"projects/" + project_id + "/databases/" + firestore_db + "/documents/videos/" + video_id}
           - current_time: ${time.format(sys.now())}
 
-    # Deduplication: Check if this video has already been processed or is processing.
-    # We use the calculated video_id (file hash) to look up the Firestore document.
-    # If the document doesn't exist (404), the exception path allows normal processing.
-    - check_duplicate:
-        try:
-          call: googleapis.firestore.v1.projects.databases.documents.get
-          args:
-            name: ${doc_name}
-          result: existing_doc
-        except:
-          as: e
-          steps:
-            - check_not_found:
-                switch:
-                  - condition: ${e.code == 404}
-                    next: log_start # Document doesn't exist, proceed
-            - reraise_error:
-                raise: ${e} # Real error, propagate
-
-    # Guard against duplicate processing; consider queued, in-flight, and completed states.
-    - analyze_existing:
-        switch:
-          - condition: ${"fields" in existing_doc and "status" in existing_doc.fields and (existing_doc.fields.status.stringValue == "PENDING" or existing_doc.fields.status.stringValue == "PROCESSING" or existing_doc.fields.status.stringValue == "COMPLETED")}
-            next: return_duplicate
-
     # Emit a structured log entry for observability and traceability.
     - log_start:
         call: sys.log
@@ -107,11 +82,9 @@ main:
               output_uri_ai: ${output_uri_ai}
               template_id: ${template_id}
               doc_name: ${doc_name}
-          - worker_args_str: ${text.decode(json.encode(worker_args))}
           - api_body:
-              argument: ${worker_args_str}
-          - api_body_str: ${json.encode(api_body)}
-          - task_body_base64: ${base64.encode(api_body_str)}
+              argument: ${text.decode(json.encode(worker_args))}
+          - task_body_base64: ${base64.encode(json.encode(api_body))}
           - worker_url: ${"https://workflowexecutions.googleapis.com/v1/projects/" + project_id + "/locations/" + project_region + "/workflows/" + worker_workflow_id + "/executions"}
           - queue_path: ${"projects/" + project_id + "/locations/" + project_region + "/queues/" + queue_id}
 
