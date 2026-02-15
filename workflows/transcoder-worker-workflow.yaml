@@ -132,22 +132,23 @@ main:
                   steps:
                     - start_ai_analysis:
                         try:
-                          call: http.post
-                          args:
-                            url: "https://videointelligence.googleapis.com/v1/videos:annotate"
-                            auth:
-                              type: OAuth2
-                            body:
-                              inputUri: ${input_uri}
-                              features:
-                                [
-                                  "LABEL_DETECTION",
-                                  "SHOT_CHANGE_DETECTION",
-                                  "EXPLICIT_CONTENT_DETECTION",
-                                ]
-                              outputUri: ${ai_output_uri}
-                          result: ai_result
                           steps:
+                            - call_ai_analysis:
+                                call: http.post
+                                args:
+                                  url: "https://videointelligence.googleapis.com/v1/videos:annotate"
+                                  auth:
+                                    type: OAuth2
+                                  body:
+                                    inputUri: ${input_uri}
+                                    features:
+                                      [
+                                        "LABEL_DETECTION",
+                                        "SHOT_CHANGE_DETECTION",
+                                        "EXPLICIT_CONTENT_DETECTION",
+                                      ]
+                                    outputUri: ${ai_output_uri}
+                                result: ai_result
                             - log_ai_start:
                                 call: sys.log
                                 args:
